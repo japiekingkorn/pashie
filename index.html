@@ -713,11 +713,21 @@
                         </div>
 
                         {/* DEBUG INFO - TIJDELIJK */}
-                        {debugInfo && (
-                            <div className="bg-yellow-100 border border-yellow-400 p-3 m-4 rounded text-xs">
-                                <strong>🐛 Debug:</strong> {debugInfo}
-                            </div>
-                        )}
+                        <div className="bg-yellow-100 border border-yellow-400 p-3 m-4 rounded text-xs">
+                            <strong>🐛 Debug:</strong> {debugInfo || 'Klik op een kaart...'}<br/>
+                            <strong>Aantal kaarten:</strong> {filteredCards.length}<br/>
+                            <strong>selectedCard:</strong> {selectedCard ? 'JA - ' + selectedCard.storeName : 'NEE'}
+                            <button 
+                                onClick={() => {
+                                    if (filteredCards.length > 0) {
+                                        setSelectedCard(filteredCards[0]);
+                                    }
+                                }}
+                                className="mt-2 bg-red-500 text-white px-3 py-1 rounded text-xs block w-full"
+                            >
+                                🔧 TEST: Open eerste kaart
+                            </button>
+                        </div>
 
                         <div className="flex-1 overflow-auto">
                             {filteredCards.length === 0 ? (
@@ -746,14 +756,15 @@
                                         return (
                                             <button
                                                 key={card.id}
-                                                onClick={() => {
-                                                    setDebugInfo(`Kaart geklikt: ${card.storeName}, Barcode: ${card.barcodeValue}, Format: ${card.barcodeFormat}`);
-                                                    setTimeout(() => {
-                                                        setSelectedCard(card);
-                                                        useCard(card.id);
-                                                    }, 100);
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setDebugInfo(`KLIK! Winkel: ${card.storeName} | Barcode: ${card.barcodeValue}`);
+                                                    setSelectedCard(card);
+                                                    useCard(card.id);
                                                 }}
                                                 className="card-button"
+                                                style={{ cursor: 'pointer', touchAction: 'manipulation' }}
                                             >
                                                 {card.logoType === 'preset' ? (
                                                     <img 
