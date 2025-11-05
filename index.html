@@ -587,60 +587,20 @@
             function CardsTab() {
                 const [selectedCard, setSelectedCard] = useState(null);
                 const [searchQuery, setSearchQuery] = useState('');
-                const [debugInfo, setDebugInfo] = useState('');
                 const barcodeRef = useRef(null);
 
                 useEffect(() => {
                     if (selectedCard && barcodeRef.current) {
                         try {
-                            // Determine barcode format
-                            let format = 'CODE128'; // Default fallback
-                            
-                            // Map common formats
-                            if (selectedCard.barcodeFormat) {
-                                const formatMap = {
-                                    'EAN_13': 'EAN13',
-                                    'EAN_8': 'EAN8',
-                                    'CODE_128': 'CODE128',
-                                    'CODE_39': 'CODE39',
-                                    'UPC_A': 'UPC',
-                                    'UPC_E': 'UPC',
-                                    'MANUAL_ENTRY': 'CODE128' // Default for manual entry
-                                };
-                                format = formatMap[selectedCard.barcodeFormat] || 'CODE128';
-                            }
-                            
-                            // Try to generate barcode
                             JsBarcode(barcodeRef.current, selectedCard.barcodeValue, {
-                                format: format,
+                                format: 'CODE128',
                                 width: 2,
                                 height: 100,
                                 displayValue: true,
-                                margin: 10,
-                                fontSize: 16
+                                margin: 10
                             });
                         } catch (err) {
-                            console.error("Barcode generation error:", err);
-                            // If barcode generation fails, try with CODE128 as fallback
-                            try {
-                                JsBarcode(barcodeRef.current, selectedCard.barcodeValue, {
-                                    format: 'CODE128',
-                                    width: 2,
-                                    height: 100,
-                                    displayValue: true,
-                                    margin: 10
-                                });
-                            } catch (fallbackErr) {
-                                console.error("Fallback barcode error:", fallbackErr);
-                                // Last resort: show as text
-                                if (barcodeRef.current) {
-                                    barcodeRef.current.innerHTML = `
-                                        <text x="50%" y="50" text-anchor="middle" font-size="24" font-family="monospace">
-                                            ${selectedCard.barcodeValue}
-                                        </text>
-                                    `;
-                                }
-                            }
+                            console.error("Barcode error:", err);
                         }
                     }
                 }, [selectedCard]);
@@ -663,19 +623,8 @@
                 if (selectedCard) {
                     return (
                         <div className="barcode-fullscreen">
-                            {/* DEBUG INFO */}
-                            <div className="absolute top-20 left-4 right-4 bg-yellow-100 border border-yellow-400 p-3 rounded text-xs z-20">
-                                <strong>🐛 Barcode Info:</strong><br/>
-                                Waarde: {selectedCard.barcodeValue}<br/>
-                                Format: {selectedCard.barcodeFormat || 'NONE'}<br/>
-                                Winkel: {selectedCard.storeName}
-                            </div>
-
                             <button
-                                onClick={() => {
-                                    setSelectedCard(null);
-                                    setDebugInfo('');
-                                }}
+                                onClick={() => setSelectedCard(null)}
                                 className="absolute top-4 left-4 bg-white p-2 rounded-full shadow-lg z-30"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -684,15 +633,12 @@
                             </button>
 
                             <div className="text-center px-4">
-                                <h2 className="text-2xl font-bold mb-4 mt-32">{selectedCard.storeName}</h2>
+                                <h2 className="text-2xl font-bold mb-4">{selectedCard.storeName}</h2>
                                 <div className="bg-white p-8 rounded-lg shadow-xl">
                                     <svg ref={barcodeRef}></svg>
                                 </div>
                                 <p className="text-gray-600 mt-4 font-mono text-sm">
                                     {selectedCard.barcodeValue}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-2">
-                                    Format: {selectedCard.barcodeFormat || 'UNKNOWN'}
                                 </p>
                             </div>
                         </div>
@@ -711,24 +657,6 @@
                                 className="w-full px-4 py-2 rounded-lg text-gray-900"
                             />
                         </div>
-
-                        {/* DEBUG INFO - TIJDELIJK */}
-                        {!selectedCard && (
-                            <div className="bg-yellow-100 border border-yellow-400 p-3 m-4 rounded text-xs">
-                                <strong>🐛 Debug:</strong> {debugInfo || 'Raak een kaart aan...'}<br/>
-                                <strong>Aantal kaarten:</strong> {filteredCards.length}
-                                <button 
-                                    onClick={() => {
-                                        if (filteredCards.length > 0) {
-                                            setSelectedCard(filteredCards[0]);
-                                        }
-                                    }}
-                                    className="mt-2 bg-red-500 text-white px-3 py-1 rounded text-xs block w-full"
-                                >
-                                    🔧 TEST: Open eerste kaart
-                                </button>
-                            </div>
-                        )}
 
                         <div className="flex-1 overflow-auto">
                             {filteredCards.length === 0 ? (
@@ -749,47 +677,27 @@
                                 </div>
                             ) : (
                                 <div className="card-grid">
-                                    {filteredCards.map(card => {
-                                        // Create logo filename from store name
-                                        const logoFilename = card.logoData?.toLowerCase().replace(/\s+/g, '-') + '.png';
-                                        const logoPath = `icons/stores/${logoFilename}`;
-                                        
-                                        const handleCardClick = () => {
-                                            setDebugInfo(`OPENING: ${card.storeName}`);
-                                            setSelectedCard(card);
-                                            useCard(card.id);
-                                        };
-                                        
-                                        return (
-                                            <div
-                                                key={card.id}
-                                                onTouchStart={handleCardClick}
-                                                className="card-button"
-                                                style={{ cursor: 'pointer' }}
-                                            >
-                                                {card.logoType === 'preset' ? (
-                                                    <img 
-                                                        src={logoPath}
-                                                        alt={card.storeName}
-                                                        className="card-logo"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            e.target.nextSibling.style.display = 'flex';
-                                                        }}
-                                                    />
-                                                ) : null}
-                                                <div 
-                                                    className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold"
-                                                    style={{ display: card.logoType === 'preset' ? 'none' : 'flex' }}
-                                                >
-                                                    {card.logoData}
-                                                </div>
-                                                <p className="mt-3 font-bold text-sm text-center px-2">
-                                                    {card.storeName}
-                                                </p>
+                                    {filteredCards.map((card, index) => (
+                                        <div
+                                            key={card.id}
+                                            onTouchStart={() => {
+                                                setSelectedCard(card);
+                                                useCard(card.id);
+                                            }}
+                                            onClick={() => {
+                                                setSelectedCard(card);
+                                                useCard(card.id);
+                                            }}
+                                            className="card-button"
+                                        >
+                                            <div className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold">
+                                                {card.logoData || card.storeName.charAt(0).toUpperCase()}
                                             </div>
-                                        );
-                                    })}
+                                            <p className="mt-3 font-bold text-sm text-center px-2">
+                                                {card.storeName}
+                                            </p>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
