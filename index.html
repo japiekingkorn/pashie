@@ -539,7 +539,13 @@
                                             {presetLogos.map(logo => (
                                                 <button
                                                     key={logo}
-                                                    onClick={() => setSelectedLogo(logo)}
+                                                    onClick={() => {
+                                                        setSelectedLogo(logo);
+                                                        // Auto-fill store name if empty
+                                                        if (!storeName) {
+                                                            setStoreName(logo);
+                                                        }
+                                                    }}
                                                     className={`p-3 border-2 rounded-lg text-sm ${
                                                         selectedLogo === logo 
                                                             ? 'border-turquoise bg-blue-50' 
@@ -585,13 +591,56 @@
 
                 useEffect(() => {
                     if (selectedCard && barcodeRef.current) {
-                        JsBarcode(barcodeRef.current, selectedCard.barcodeValue, {
-                            format: selectedCard.barcodeFormat === 'EAN_13' ? 'EAN13' : 'CODE128',
-                            width: 2,
-                            height: 100,
-                            displayValue: true,
-                            margin: 10
-                        });
+                        try {
+                            // Determine barcode format
+                            let format = 'CODE128'; // Default fallback
+                            
+                            // Map common formats
+                            if (selectedCard.barcodeFormat) {
+                                const formatMap = {
+                                    'EAN_13': 'EAN13',
+                                    'EAN_8': 'EAN8',
+                                    'CODE_128': 'CODE128',
+                                    'CODE_39': 'CODE39',
+                                    'UPC_A': 'UPC',
+                                    'UPC_E': 'UPC',
+                                    'MANUAL_ENTRY': 'CODE128' // Default for manual entry
+                                };
+                                format = formatMap[selectedCard.barcodeFormat] || 'CODE128';
+                            }
+                            
+                            // Try to generate barcode
+                            JsBarcode(barcodeRef.current, selectedCard.barcodeValue, {
+                                format: format,
+                                width: 2,
+                                height: 100,
+                                displayValue: true,
+                                margin: 10,
+                                fontSize: 16
+                            });
+                        } catch (err) {
+                            console.error("Barcode generation error:", err);
+                            // If barcode generation fails, try with CODE128 as fallback
+                            try {
+                                JsBarcode(barcodeRef.current, selectedCard.barcodeValue, {
+                                    format: 'CODE128',
+                                    width: 2,
+                                    height: 100,
+                                    displayValue: true,
+                                    margin: 10
+                                });
+                            } catch (fallbackErr) {
+                                console.error("Fallback barcode error:", fallbackErr);
+                                // Last resort: show as text
+                                if (barcodeRef.current) {
+                                    barcodeRef.current.innerHTML = `
+                                        <text x="50%" y="50" text-anchor="middle" font-size="24" font-family="monospace">
+                                            ${selectedCard.barcodeValue}
+                                        </text>
+                                    `;
+                                }
+                            }
+                        }
                     }
                 }, [selectedCard]);
 
@@ -667,23 +716,44 @@
                                 </div>
                             ) : (
                                 <div className="card-grid">
-                                    {filteredCards.map(card => (
-                                        <button
-                                            key={card.id}
-                                            onClick={() => {
-                                                setSelectedCard(card);
-                                                useCard(card.id);
-                                            }}
-                                            className="card-button"
-                                        >
-                                            <div className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold">
-                                                {card.logoData}
-                                            </div>
-                                            <p className="mt-3 font-bold text-sm text-center px-2">
-                                                {card.storeName}
-                                            </p>
-                                        </button>
-                                    ))}
+                                    {filteredCards.map(card => {
+                                        // Create logo filename from store name
+                                        const logoFilename = card.logoData?.toLowerCase().replace(/\s+/g, '-') + '.png';
+                                        const logoPath = `icons/stores/${logoFilename}`;
+                                        
+                                        return (
+                                            <button
+                                                key={card.id}
+                                                onClick={() => {
+                                                    setSelectedCard(card);
+                                                    useCard(card.id);
+                                                }}
+                                                className="card-button"
+                                            >
+                                                {card.logoType === 'preset' ? (
+                                                    <img 
+                                                        src={logoPath}
+                                                        alt={card.storeName}
+                                                        className="card-logo"
+                                                        onError={(e) => {
+                                                            // If logo doesn't exist, show fallback
+                                                            e.target.style.display = 'none';
+                                                            e.target.nextSibling.style.display = 'flex';
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <div 
+                                                    className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold"
+                                                    style={{ display: card.logoType === 'preset' ? 'none' : 'flex' }}
+                                                >
+                                                    {card.logoData}
+                                                </div>
+                                                <p className="mt-3 font-bold text-sm text-center px-2">
+                                                    {card.storeName}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
