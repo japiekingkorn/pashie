@@ -290,7 +290,7 @@
                         // IMPORTANT: First request camera permission explicitly
                         // This shows the browser permission dialog
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                            setError('❌ Camera wordt niet ondersteund door deze browser.');
+                            setError('âŒ Camera wordt niet ondersteund door deze browser.');
                             return;
                         }
 
@@ -335,13 +335,13 @@
                         setScanning(false);
                         
                         if (err.name === 'NotAllowedError' || err.message.includes('Permission')) {
-                            setError('❌ Camera toegang geweigerd. Klik nogmaals op "Start Scannen" en geef toestemming.');
+                            setError('âŒ Camera toegang geweigerd. Klik nogmaals op "Start Scannen" en geef toestemming.');
                         } else if (err.name === 'NotFoundError') {
-                            setError('❌ Geen camera gevonden op dit apparaat.');
+                            setError('âŒ Geen camera gevonden op dit apparaat.');
                         } else if (err.name === 'NotReadableError') {
-                            setError('❌ Camera is al in gebruik door een andere app.');
+                            setError('âŒ Camera is al in gebruik door een andere app.');
                         } else {
-                            setError('❌ Fout bij starten camera: ' + err.message);
+                            setError('âŒ Fout bij starten camera: ' + err.message);
                         }
                     }
                 };
@@ -432,7 +432,7 @@
                                         onClick={startScanning}
                                         className="bg-coral text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-opacity-90 transition"
                                     >
-                                        📷 Start Scannen
+                                        ðŸ“· Start Scannen
                                     </button>
                                     <p className="text-gray-600 mt-4 text-sm">
                                         Scan de barcode van je membership card
@@ -443,17 +443,17 @@
                                             onClick={() => setManualEntry(true)}
                                             className="text-turquoise font-bold text-sm underline"
                                         >
-                                            ✏️ Of voer barcode handmatig in
+                                            âœï¸ Of voer barcode handmatig in
                                         </button>
                                     </div>
 
                                     <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                                        <p className="text-sm font-bold text-blue-900 mb-2">💡 Tips:</p>
+                                        <p className="text-sm font-bold text-blue-900 mb-2">ðŸ’¡ Tips:</p>
                                         <ul className="text-xs text-blue-800 space-y-1">
-                                            <li>• Geef camera toegang wanneer gevraagd</li>
-                                            <li>• Zorg voor goede belichting</li>
-                                            <li>• Houd de barcode stil en recht</li>
-                                            <li>• Werkt met EAN, QR codes en meer</li>
+                                            <li>â€¢ Geef camera toegang wanneer gevraagd</li>
+                                            <li>â€¢ Zorg voor goede belichting</li>
+                                            <li>â€¢ Houd de barcode stil en recht</li>
+                                            <li>â€¢ Werkt met EAN, QR codes en meer</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -497,7 +497,7 @@
                                 <div>
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                                         <p className="text-sm text-yellow-800">
-                                            📸 Camera wordt gestart... Geef toestemming als gevraagd.
+                                            ðŸ“¸ Camera wordt gestart... Geef toestemming als gevraagd.
                                         </p>
                                     </div>
                                     <div id="qr-reader" className="mb-4"></div>
@@ -653,7 +653,7 @@
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="🔍 Zoek pasje..."
+                                placeholder="ðŸ” Zoek pasje..."
                                 className="w-full px-4 py-2 rounded-lg text-gray-900"
                             />
                         </div>
@@ -661,7 +661,7 @@
                         <div className="flex-1 overflow-auto">
                             {filteredCards.length === 0 ? (
                                 <div className="text-center py-12 px-4">
-                                    <div className="text-6xl mb-4">💳</div>
+                                    <div className="text-6xl mb-4">ðŸ’³</div>
                                     <h3 className="text-xl font-bold text-gray-700 mb-2">
                                         Nog geen pasjes
                                     </h3>
@@ -676,28 +676,66 @@
                                     </button>
                                 </div>
                             ) : (
-                                <div className="card-grid">
-                                    {filteredCards.map((card, index) => (
-                                        <div
-                                            key={card.id}
-                                            onTouchStart={() => {
-                                                setSelectedCard(card);
-                                                useCard(card.id);
-                                            }}
-                                            onClick={() => {
-                                                setSelectedCard(card);
-                                                useCard(card.id);
-                                            }}
-                                            className="card-button"
-                                        >
-                                            <div className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold">
-                                                {card.logoData || card.storeName.charAt(0).toUpperCase()}
-                                            </div>
-                                            <p className="mt-3 font-bold text-sm text-center px-2">
-                                                {card.storeName}
-                                            </p>
-                                        </div>
-                                    ))}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', padding: '16px' }}>
+                                    {filteredCards.map((card) => {
+                                        const firstLetter = card.logoData || card.storeName.charAt(0).toUpperCase();
+                                        return (
+                                            <button
+                                                key={card.id}
+                                                onClick={() => {
+                                                    console.log('Card tapped:', card.storeName);
+                                                    setSelectedCard(card);
+                                                    useCard(card.id);
+                                                }}
+                                                style={{
+                                                    WebkitTapHighlightColor: 'rgba(78, 205, 196, 0.3)',
+                                                    touchAction: 'manipulation',
+                                                    border: 'none',
+                                                    padding: '16px',
+                                                    background: 'white',
+                                                    borderRadius: '16px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    minHeight: '140px'
+                                                }}
+                                                className="active:scale-95 active:shadow-lg transition-all duration-150"
+                                            >
+                                                <div 
+                                                    style={{
+                                                        width: '80px',
+                                                        height: '80px',
+                                                        borderRadius: '12px',
+                                                        background: 'linear-gradient(135deg, #FF6B5A 0%, #4ECDC4 100%)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'white',
+                                                        fontSize: '2rem',
+                                                        fontWeight: 'bold',
+                                                        marginBottom: '12px',
+                                                        pointerEvents: 'none'
+                                                    }}
+                                                >
+                                                    {firstLetter}
+                                                </div>
+                                                <span 
+                                                    style={{
+                                                        fontWeight: 'bold',
+                                                        fontSize: '0.875rem',
+                                                        textAlign: 'center',
+                                                        color: '#1F2937',
+                                                        pointerEvents: 'none'
+                                                    }}
+                                                >
+                                                    {card.storeName}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -733,7 +771,7 @@
                                 const data = JSON.parse(event.target.result);
                                 if (data.cards) setCards(data.cards);
                                 if (data.settings) setSettings(data.settings);
-                                alert('Data succesvol geïmporteerd!');
+                                alert('Data succesvol geÃ¯mporteerd!');
                             } catch (err) {
                                 alert('Fout bij importeren: ' + err.message);
                             }
@@ -800,7 +838,7 @@
                                         onClick={exportData}
                                         className="w-full bg-turquoise text-white py-2 rounded-lg font-bold"
                                     >
-                                        📥 Exporteer Data
+                                        ðŸ“¥ Exporteer Data
                                     </button>
                                     <label className="block">
                                         <span className="sr-only">Importeer backup</span>
@@ -828,10 +866,10 @@
 
                         <div className="flex-1 overflow-auto p-4 space-y-4">
                             <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Welkom bij Pashie! 👋</h3>
+                                <h3 className="font-bold text-lg mb-2">Welkom bij Pashie! ðŸ‘‹</h3>
                                 <p className="text-gray-700 text-sm">
                                     Pashie is je digitale wallet voor alle membership cards. 
-                                    Geen dikke portemonnee meer - al je pasjes in één app!
+                                    Geen dikke portemonnee meer - al je pasjes in Ã©Ã©n app!
                                 </p>
                             </div>
 
@@ -850,11 +888,11 @@
                             <div className="bg-white p-4 rounded-lg shadow">
                                 <h3 className="font-bold text-lg mb-2">Tips</h3>
                                 <div className="space-y-1 text-sm text-gray-700">
-                                    <p>• Zorg voor goede belichting bij scannen</p>
-                                    <p>• Houd de barcode stil en recht</p>
-                                    <p>• Gebruik de zoekfunctie voor snelle toegang</p>
-                                    <p>• Maak regelmatig een backup</p>
-                                    <p>• De app werkt volledig offline!</p>
+                                    <p>â€¢ Zorg voor goede belichting bij scannen</p>
+                                    <p>â€¢ Houd de barcode stil en recht</p>
+                                    <p>â€¢ Gebruik de zoekfunctie voor snelle toegang</p>
+                                    <p>â€¢ Maak regelmatig een backup</p>
+                                    <p>â€¢ De app werkt volledig offline!</p>
                                 </div>
                             </div>
 
@@ -869,7 +907,7 @@
 
                             <div className="text-center text-sm text-gray-500 py-4">
                                 <p>Pashie v1.0.0</p>
-                                <p className="mt-1">Made with 💳 for easy shopping</p>
+                                <p className="mt-1">Made with ðŸ’³ for easy shopping</p>
                             </div>
                         </div>
                     </div>
