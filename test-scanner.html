@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Test - Pashie</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        button {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 0;
+            width: 100%;
+        }
+        #reader {
+            width: 100%;
+            margin: 20px 0;
+        }
+        .result {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #ffebee;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            color: #c62828;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📷 Scanner Test</h1>
+    <p>Deze pagina test of de barcode scanner werkt op jouw device.</p>
+    
+    <div id="status" class="info">
+        <p><strong>Status:</strong> Klaar om te testen</p>
+    </div>
+    
+    <button onclick="checkLibrary()">1. Check Library</button>
+    <button onclick="checkCamera()">2. Check Camera</button>
+    <button onclick="startScanner()">3. Start Scanner</button>
+    <button onclick="stopScanner()">Stop Scanner</button>
+    
+    <div id="reader"></div>
+    <div id="result"></div>
+    
+    <script>
+        let html5QrCode = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = `<p><strong>Status:</strong> ${message}</p>`;
+        }
+        
+        function showResult(message, type = 'result') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = type;
+            resultDiv.innerHTML = `<p>${message}</p>`;
+        }
+        
+        function checkLibrary() {
+            if (typeof Html5Qrcode !== 'undefined') {
+                updateStatus('✅ html5-qrcode library is geladen!', 'result');
+            } else {
+                updateStatus('❌ html5-qrcode library is NIET geladen!', 'error');
+            }
+        }
+        
+        async function checkCamera() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    updateStatus('❌ Camera API niet beschikbaar in deze browser', 'error');
+                    return;
+                }
+                
+                updateStatus('Vraag camera toegang...', 'info');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                
+                // Stop the stream immediately
+                stream.getTracks().forEach(track => track.stop());
+                
+                updateStatus('✅ Camera toegang verkregen!', 'result');
+            } catch (err) {
+                if (err.name === 'NotAllowedError') {
+                    updateStatus('❌ Camera toegang geweigerd', 'error');
+                } else if (err.name === 'NotFoundError') {
+                    updateStatus('❌ Geen camera gevonden', 'error');
+                } else {
+                    updateStatus('❌ Camera error: ' + err.message, 'error');
+                }
+            }
+        }
+        
+        async function startScanner() {
+            try {
+                if (typeof Html5Qrcode === 'undefined') {
+                    updateStatus('❌ Library niet geladen!', 'error');
+                    return;
+                }
+                
+                updateStatus('Scanner starten...', 'info');
+                html5QrCode = new Html5Qrcode("reader");
+                
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    (decodedText, decodedResult) => {
+                        showResult(`✅ Gescand: ${decodedText}`, 'result');
+                        updateStatus('Scanner actief - Barcode gevonden!', 'result');
+                    },
+                    (errorMessage) => {
+                        // Silent - happens every frame
+                    }
+                );
+                
+                updateStatus('✅ Scanner is actief!', 'result');
+            } catch (err) {
+                updateStatus('❌ Scanner error: ' + err.message, 'error');
+            }
+        }
+        
+        async function stopScanner() {
+            if (html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                    updateStatus('Scanner gestopt', 'info');
+                } catch (err) {
+                    updateStatus('Error bij stoppen: ' + err.message, 'error');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
