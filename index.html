@@ -754,7 +754,7 @@
                                         const logoPath = `icons/stores/${logoFilename}`;
                                         
                                         return (
-                                            <button
+                                            <div
                                                 key={card.id}
                                                 onClick={(e) => {
                                                     e.preventDefault();
@@ -763,8 +763,17 @@
                                                     setSelectedCard(card);
                                                     useCard(card.id);
                                                 }}
+                                                onTouchEnd={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setDebugInfo(`TOUCH! Winkel: ${card.storeName} | Barcode: ${card.barcodeValue}`);
+                                                    setSelectedCard(card);
+                                                    useCard(card.id);
+                                                }}
                                                 className="card-button"
                                                 style={{ cursor: 'pointer', touchAction: 'manipulation' }}
+                                                role="button"
+                                                tabIndex={0}
                                             >
                                                 {card.logoType === 'preset' ? (
                                                     <img 
@@ -776,18 +785,22 @@
                                                             e.target.style.display = 'none';
                                                             e.target.nextSibling.style.display = 'flex';
                                                         }}
+                                                        style={{ pointerEvents: 'none' }}
                                                     />
                                                 ) : null}
                                                 <div 
                                                     className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold"
-                                                    style={{ display: card.logoType === 'preset' ? 'none' : 'flex' }}
+                                                    style={{ 
+                                                        display: card.logoType === 'preset' ? 'none' : 'flex',
+                                                        pointerEvents: 'none'
+                                                    }}
                                                 >
                                                     {card.logoData}
                                                 </div>
-                                                <p className="mt-3 font-bold text-sm text-center px-2">
+                                                <p className="mt-3 font-bold text-sm text-center px-2" style={{ pointerEvents: 'none' }}>
                                                     {card.storeName}
                                                 </p>
-                                            </button>
+                                            </div>
                                         );
                                     })}
                                 </div>
