@@ -713,21 +713,22 @@
                         </div>
 
                         {/* DEBUG INFO - TIJDELIJK */}
-                        <div className="bg-yellow-100 border border-yellow-400 p-3 m-4 rounded text-xs">
-                            <strong>🐛 Debug:</strong> {debugInfo || 'Klik op een kaart...'}<br/>
-                            <strong>Aantal kaarten:</strong> {filteredCards.length}<br/>
-                            <strong>selectedCard:</strong> {selectedCard ? 'JA - ' + selectedCard.storeName : 'NEE'}
-                            <button 
-                                onClick={() => {
-                                    if (filteredCards.length > 0) {
-                                        setSelectedCard(filteredCards[0]);
-                                    }
-                                }}
-                                className="mt-2 bg-red-500 text-white px-3 py-1 rounded text-xs block w-full"
-                            >
-                                🔧 TEST: Open eerste kaart
-                            </button>
-                        </div>
+                        {!selectedCard && (
+                            <div className="bg-yellow-100 border border-yellow-400 p-3 m-4 rounded text-xs">
+                                <strong>🐛 Debug:</strong> {debugInfo || 'Raak een kaart aan...'}<br/>
+                                <strong>Aantal kaarten:</strong> {filteredCards.length}
+                                <button 
+                                    onClick={() => {
+                                        if (filteredCards.length > 0) {
+                                            setSelectedCard(filteredCards[0]);
+                                        }
+                                    }}
+                                    className="mt-2 bg-red-500 text-white px-3 py-1 rounded text-xs block w-full"
+                                >
+                                    🔧 TEST: Open eerste kaart
+                                </button>
+                            </div>
+                        )}
 
                         <div className="flex-1 overflow-auto">
                             {filteredCards.length === 0 ? (
@@ -753,27 +754,18 @@
                                         const logoFilename = card.logoData?.toLowerCase().replace(/\s+/g, '-') + '.png';
                                         const logoPath = `icons/stores/${logoFilename}`;
                                         
+                                        const handleCardClick = () => {
+                                            setDebugInfo(`OPENING: ${card.storeName}`);
+                                            setSelectedCard(card);
+                                            useCard(card.id);
+                                        };
+                                        
                                         return (
                                             <div
                                                 key={card.id}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setDebugInfo(`KLIK! Winkel: ${card.storeName} | Barcode: ${card.barcodeValue}`);
-                                                    setSelectedCard(card);
-                                                    useCard(card.id);
-                                                }}
-                                                onTouchEnd={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setDebugInfo(`TOUCH! Winkel: ${card.storeName} | Barcode: ${card.barcodeValue}`);
-                                                    setSelectedCard(card);
-                                                    useCard(card.id);
-                                                }}
+                                                onTouchStart={handleCardClick}
                                                 className="card-button"
-                                                style={{ cursor: 'pointer', touchAction: 'manipulation' }}
-                                                role="button"
-                                                tabIndex={0}
+                                                style={{ cursor: 'pointer' }}
                                             >
                                                 {card.logoType === 'preset' ? (
                                                     <img 
@@ -781,23 +773,18 @@
                                                         alt={card.storeName}
                                                         className="card-logo"
                                                         onError={(e) => {
-                                                            // If logo doesn't exist, show fallback
                                                             e.target.style.display = 'none';
                                                             e.target.nextSibling.style.display = 'flex';
                                                         }}
-                                                        style={{ pointerEvents: 'none' }}
                                                     />
                                                 ) : null}
                                                 <div 
                                                     className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold"
-                                                    style={{ 
-                                                        display: card.logoType === 'preset' ? 'none' : 'flex',
-                                                        pointerEvents: 'none'
-                                                    }}
+                                                    style={{ display: card.logoType === 'preset' ? 'none' : 'flex' }}
                                                 >
                                                     {card.logoData}
                                                 </div>
-                                                <p className="mt-3 font-bold text-sm text-center px-2" style={{ pointerEvents: 'none' }}>
+                                                <p className="mt-3 font-bold text-sm text-center px-2">
                                                     {card.storeName}
                                                 </p>
                                             </div>
