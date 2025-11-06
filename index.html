@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Pashie">
-    <title>Pashie - Digital Membership Cards</title>
+    <title>Pashie - Test Cards</title>
     
     <!-- PWA Support -->
     <link rel="manifest" href="manifest.json">
@@ -22,7 +22,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Barcode Libraries -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     
     <style>
@@ -44,105 +43,6 @@
             display: flex;
             flex-direction: column;
         }
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        .bottom-nav {
-            padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
-        }
-        
-        /* Splash Screen */
-        #splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            background: #1A7B7B;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            animation: fadeOut 0.5s ease-in-out 1.5s forwards;
-            margin: 0;
-            padding: 0;
-        }
-        
-        #splash-logo {
-            width: 280px;
-            height: 280px;
-            object-fit: contain;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-                visibility: hidden;
-            }
-        }
-
-        /* Scanner Styles */
-        #qr-reader {
-            width: 100%;
-        }
-        #qr-reader__dashboard_section_swaplink {
-            display: none !important;
-        }
-        
-        /* Card Grid */
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 16px;
-            padding: 16px;
-        }
-        
-        .card-button {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: all 0.2s;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-        
-        .card-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-color: #4ECDC4;
-        }
-        
-        .card-logo {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            border-radius: 12px;
-        }
-        
-        /* Barcode Display */
         .barcode-fullscreen {
             position: fixed;
             top: 0;
@@ -154,76 +54,43 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-center;
         }
-        
-        /* Tailwind Custom Colors */
         .bg-coral { background-color: #FF6B5A; }
-        .bg-gold { background-color: #FFB84D; }
         .bg-turquoise { background-color: #4ECDC4; }
         .bg-teal { background-color: #1A7B7B; }
-        .text-coral { color: #FF6B5A; }
         .text-turquoise { color: #4ECDC4; }
-        .border-turquoise { border-color: #4ECDC4; }
     </style>
 </head>
 <body>
-    <!-- Splash Screen -->
-    <div id="splash-screen">
-        <img id="splash-logo" src="icons/icon-512.png" alt="Pashie Logo">
-    </div>
-
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Utility Functions
         const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
-        
-        const saveToStorage = (key, data) => {
-            localStorage.setItem(key, JSON.stringify(data));
-        };
-        
+        const saveToStorage = (key, data) => localStorage.setItem(key, JSON.stringify(data));
         const loadFromStorage = (key, defaultValue = null) => {
             const stored = localStorage.getItem(key);
             return stored ? JSON.parse(stored) : defaultValue;
         };
 
-        // Main App Component
         function Pashie() {
             const [activeTab, setActiveTab] = useState('cards');
             const [cards, setCards] = useState(() => loadFromStorage('pashie_cards', []));
-            const [settings, setSettings] = useState(() => loadFromStorage('pashie_settings', {
-                sortBy: 'alphabetical',
-                darkMode: false
-            }));
 
-            // Save cards to localStorage whenever they change
             useEffect(() => {
                 saveToStorage('pashie_cards', cards);
             }, [cards]);
-
-            // Save settings to localStorage whenever they change
-            useEffect(() => {
-                saveToStorage('pashie_settings', settings);
-            }, [settings]);
 
             const addCard = (cardData) => {
                 const newCard = {
                     id: generateId(),
                     ...cardData,
                     dateAdded: new Date().toISOString(),
-                    lastUsed: null,
                     usageCount: 0
                 };
                 setCards([...cards, newCard]);
-            };
-
-            const updateCard = (id, updates) => {
-                setCards(cards.map(card => 
-                    card.id === id ? { ...card, ...updates } : card
-                ));
             };
 
             const deleteCard = (id) => {
@@ -232,361 +99,12 @@
 
             const useCard = (id) => {
                 setCards(cards.map(card => 
-                    card.id === id ? {
-                        ...card,
-                        lastUsed: new Date().toISOString(),
-                        usageCount: (card.usageCount || 0) + 1
-                    } : card
+                    card.id === id ? { ...card, usageCount: (card.usageCount || 0) + 1 } : card
                 ));
             };
 
-            // Icons
-            const ScanIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            );
-
-            const CardsIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-            );
-
-            const SettingsIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            );
-
-            const HelpIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            );
-
-            // Scan Tab Component
-            function ScanTab() {
-                const [scanning, setScanning] = useState(false);
-                const [scannedData, setScannedData] = useState(null);
-                const [storeName, setStoreName] = useState('');
-                const [selectedLogo, setSelectedLogo] = useState(null);
-                const [error, setError] = useState(null);
-                const [manualEntry, setManualEntry] = useState(false);
-                const [manualBarcode, setManualBarcode] = useState('');
-                const scannerRef = useRef(null);
-
-                const startScanning = async () => {
-                    setError(null);
-                    
-                    try {
-                        // Check if html5-qrcode is loaded
-                        if (typeof Html5Qrcode === 'undefined') {
-                            throw new Error('Barcode scanner library niet geladen. Herlaad de pagina.');
-                        }
-
-                        // IMPORTANT: First request camera permission explicitly
-                        // This shows the browser permission dialog
-                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                            setError('âŒ Camera wordt niet ondersteund door deze browser.');
-                            return;
-                        }
-
-                        console.log("Requesting camera permission...");
-                        const stream = await navigator.mediaDevices.getUserMedia({ 
-                            video: { facingMode: "environment" } 
-                        });
-                        
-                        // Stop the stream immediately - we just needed permission
-                        stream.getTracks().forEach(track => track.stop());
-                        console.log("Camera permission granted!");
-
-                        // Now start the actual scanner
-                        setScanning(true);
-                        const html5QrCode = new Html5Qrcode("qr-reader");
-                        scannerRef.current = html5QrCode;
-
-                        await html5QrCode.start(
-                            { facingMode: "environment" },
-                            {
-                                fps: 10,
-                                qrbox: { width: 250, height: 250 },
-                                aspectRatio: 1.0
-                            },
-                            (decodedText, decodedResult) => {
-                                console.log("Barcode gescand:", decodedText);
-                                setScannedData({
-                                    value: decodedText,
-                                    format: decodedResult.result.format?.formatName || 'UNKNOWN'
-                                });
-                                html5QrCode.stop().then(() => {
-                                    setScanning(false);
-                                }).catch(err => console.error("Stop error:", err));
-                            },
-                            (errorMessage) => {
-                                // Scan errors (happens continuously while scanning)
-                                // Don't show these to user
-                            }
-                        );
-                    } catch (err) {
-                        console.error("Scanner error:", err);
-                        setScanning(false);
-                        
-                        if (err.name === 'NotAllowedError' || err.message.includes('Permission')) {
-                            setError('âŒ Camera toegang geweigerd. Klik nogmaals op "Start Scannen" en geef toestemming.');
-                        } else if (err.name === 'NotFoundError') {
-                            setError('âŒ Geen camera gevonden op dit apparaat.');
-                        } else if (err.name === 'NotReadableError') {
-                            setError('âŒ Camera is al in gebruik door een andere app.');
-                        } else {
-                            setError('âŒ Fout bij starten camera: ' + err.message);
-                        }
-                    }
-                };
-
-                const stopScanning = () => {
-                    if (scannerRef.current) {
-                        scannerRef.current.stop().then(() => {
-                            setScanning(false);
-                            setError(null);
-                        }).catch(err => {
-                            console.error("Stop error:", err);
-                            setScanning(false);
-                        });
-                    }
-                };
-
-                const saveCard = () => {
-                    if (!storeName.trim()) {
-                        alert("Vul een winkelnaam in!");
-                        return;
-                    }
-                    if (!scannedData) {
-                        alert("Scan eerst een barcode!");
-                        return;
-                    }
-
-                    addCard({
-                        storeName: storeName.trim(),
-                        barcodeValue: scannedData.value,
-                        barcodeFormat: scannedData.format,
-                        logoType: selectedLogo ? 'preset' : 'default',
-                        logoData: selectedLogo || storeName.charAt(0).toUpperCase()
-                    });
-
-                    // Reset form
-                    setScannedData(null);
-                    setStoreName('');
-                    setSelectedLogo(null);
-                    setManualEntry(false);
-                    setManualBarcode('');
-                    setActiveTab('cards');
-                };
-
-                const submitManualBarcode = () => {
-                    if (!manualBarcode.trim()) {
-                        alert("Vul een barcode nummer in!");
-                        return;
-                    }
-                    setScannedData({
-                        value: manualBarcode.trim(),
-                        format: 'MANUAL_ENTRY'
-                    });
-                    setManualEntry(false);
-                };
-
-                const presetLogos = [
-                    'Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus',
-                    'Etos', 'Kruidvat', 'Action', 'HEMA', 'MediaMarkt'
-                ];
-
-                return (
-                    <div className="flex flex-col h-full bg-gray-50">
-                        <div className="bg-teal text-white p-4 shadow-md">
-                            <h1 className="text-xl font-bold">Scan Pasje</h1>
-                        </div>
-
-                        <div className="flex-1 overflow-auto p-4">
-                            {error && (
-                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
-                                    <p className="text-sm">{error}</p>
-                                    <button 
-                                        onClick={() => setError(null)}
-                                        className="text-xs underline mt-2"
-                                    >
-                                        Probeer opnieuw
-                                    </button>
-                                </div>
-                            )}
-
-                            {!scanning && !scannedData && !error && !manualEntry && (
-                                <div className="text-center py-12">
-                                    <div className="mb-6">
-                                        <svg className="w-24 h-24 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                        </svg>
-                                    </div>
-                                    <button
-                                        onClick={startScanning}
-                                        className="bg-coral text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-opacity-90 transition"
-                                    >
-                                        ðŸ“· Start Scannen
-                                    </button>
-                                    <p className="text-gray-600 mt-4 text-sm">
-                                        Scan de barcode van je membership card
-                                    </p>
-                                    
-                                    <div className="mt-6">
-                                        <button
-                                            onClick={() => setManualEntry(true)}
-                                            className="text-turquoise font-bold text-sm underline"
-                                        >
-                                            âœï¸ Of voer barcode handmatig in
-                                        </button>
-                                    </div>
-
-                                    <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                                        <p className="text-sm font-bold text-blue-900 mb-2">ðŸ’¡ Tips:</p>
-                                        <ul className="text-xs text-blue-800 space-y-1">
-                                            <li>â€¢ Geef camera toegang wanneer gevraagd</li>
-                                            <li>â€¢ Zorg voor goede belichting</li>
-                                            <li>â€¢ Houd de barcode stil en recht</li>
-                                            <li>â€¢ Werkt met EAN, QR codes en meer</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            )}
-
-                            {manualEntry && (
-                                <div className="bg-white p-6 rounded-lg shadow">
-                                    <h3 className="font-bold text-lg mb-4">Handmatige Invoer</h3>
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        Vul het nummer van de barcode handmatig in. Je vindt dit meestal onder de barcode op je pasje.
-                                    </p>
-                                    <input
-                                        type="text"
-                                        value={manualBarcode}
-                                        onChange={(e) => setManualBarcode(e.target.value)}
-                                        placeholder="Bijv. 1234567890123"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 font-mono"
-                                        autoFocus
-                                    />
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setManualEntry(false);
-                                                setManualBarcode('');
-                                            }}
-                                            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-bold"
-                                        >
-                                            Annuleren
-                                        </button>
-                                        <button
-                                            onClick={submitManualBarcode}
-                                            className="flex-1 bg-turquoise text-white py-3 rounded-lg font-bold"
-                                        >
-                                            Doorgaan
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {scanning && (
-                                <div>
-                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                                        <p className="text-sm text-yellow-800">
-                                            ðŸ“¸ Camera wordt gestart... Geef toestemming als gevraagd.
-                                        </p>
-                                    </div>
-                                    <div id="qr-reader" className="mb-4"></div>
-                                    <button
-                                        onClick={stopScanning}
-                                        className="w-full bg-red-500 text-white py-3 rounded-lg font-bold"
-                                    >
-                                        Stop Scannen
-                                    </button>
-                                </div>
-                            )}
-
-                            {scannedData && (
-                                <div className="space-y-4">
-                                    <div className="bg-white p-4 rounded-lg shadow">
-                                        <p className="text-sm text-gray-600 mb-1">Gescande barcode:</p>
-                                        <p className="font-mono font-bold text-lg">{scannedData.value}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Type: {scannedData.format}</p>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Winkelnaam *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={storeName}
-                                            onChange={(e) => setStoreName(e.target.value)}
-                                            placeholder="Bijv. Albert Heijn"
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-turquoise"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Kies een logo (optioneel)
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {presetLogos.map(logo => (
-                                                <button
-                                                    key={logo}
-                                                    onClick={() => {
-                                                        setSelectedLogo(logo);
-                                                        // Auto-fill store name if empty
-                                                        if (!storeName) {
-                                                            setStoreName(logo);
-                                                        }
-                                                    }}
-                                                    className={`p-3 border-2 rounded-lg text-sm ${
-                                                        selectedLogo === logo 
-                                                            ? 'border-turquoise bg-blue-50' 
-                                                            : 'border-gray-200 bg-white'
-                                                    }`}
-                                                >
-                                                    {logo}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setScannedData(null);
-                                                setStoreName('');
-                                                setSelectedLogo(null);
-                                            }}
-                                            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-bold"
-                                        >
-                                            Annuleren
-                                        </button>
-                                        <button
-                                            onClick={saveCard}
-                                            className="flex-1 bg-turquoise text-white py-3 rounded-lg font-bold"
-                                        >
-                                            Opslaan
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                );
-            }
-
-            // Cards Tab Component
             function CardsTab() {
                 const [selectedCard, setSelectedCard] = useState(null);
-                const [searchQuery, setSearchQuery] = useState('');
                 const barcodeRef = useRef(null);
 
                 useEffect(() => {
@@ -605,41 +123,25 @@
                     }
                 }, [selectedCard]);
 
-                const sortedCards = [...cards].sort((a, b) => {
-                    if (settings.sortBy === 'alphabetical') {
-                        return a.storeName.localeCompare(b.storeName);
-                    } else if (settings.sortBy === 'dateAdded') {
-                        return new Date(b.dateAdded) - new Date(a.dateAdded);
-                    } else if (settings.sortBy === 'mostUsed') {
-                        return (b.usageCount || 0) - (a.usageCount || 0);
-                    }
-                    return 0;
-                });
-
-                const filteredCards = sortedCards.filter(card =>
-                    card.storeName.toLowerCase().includes(searchQuery.toLowerCase())
-                );
-
                 if (selectedCard) {
                     return (
                         <div className="barcode-fullscreen">
                             <button
                                 onClick={() => setSelectedCard(null)}
-                                className="absolute top-4 left-4 bg-white p-2 rounded-full shadow-lg z-30"
+                                type="button"
+                                className="absolute top-4 left-4 bg-white p-3 rounded-full shadow-lg text-2xl font-bold"
                             >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                X
                             </button>
-
                             <div className="text-center px-4">
-                                <h2 className="text-2xl font-bold mb-4">{selectedCard.storeName}</h2>
+                                <h2 className="text-2xl font-bold mb-6">{selectedCard.storeName}</h2>
                                 <div className="bg-white p-8 rounded-lg shadow-xl">
                                     <svg ref={barcodeRef}></svg>
                                 </div>
-                                <p className="text-gray-600 mt-4 font-mono text-sm">
+                                <p className="text-gray-600 mt-6 font-mono text-lg font-bold">
                                     {selectedCard.barcodeValue}
                                 </p>
+                                <p className="text-gray-500 text-sm mt-2">(Voor handmatige invoer)</p>
                             </div>
                         </div>
                     );
@@ -648,53 +150,40 @@
                 return (
                     <div className="flex flex-col h-full bg-gray-50">
                         <div className="bg-teal text-white p-4 shadow-md">
-                            <h1 className="text-xl font-bold mb-3">Mijn Pasjes</h1>
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="ðŸ” Zoek pasje..."
-                                className="w-full px-4 py-2 rounded-lg text-gray-900"
-                            />
+                            <h1 className="text-xl font-bold">Mijn Pasjes</h1>
                         </div>
-
                         <div className="flex-1 overflow-auto">
-                            {filteredCards.length === 0 ? (
+                            {cards.length === 0 ? (
                                 <div className="text-center py-12 px-4">
-                                    <div className="text-6xl mb-4">ðŸ’³</div>
-                                    <h3 className="text-xl font-bold text-gray-700 mb-2">
-                                        Nog geen pasjes
-                                    </h3>
-                                    <p className="text-gray-600 mb-6">
-                                        Scan je eerste membership card om te beginnen!
-                                    </p>
+                                    <h3 className="text-xl font-bold text-gray-700 mb-4">Nog geen pasjes</h3>
                                     <button
                                         onClick={() => setActiveTab('scan')}
+                                        type="button"
                                         className="bg-coral text-white px-6 py-3 rounded-full font-bold"
                                     >
-                                        Scan Eerste Pasje
+                                        Voeg Test Card Toe
                                     </button>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-4 p-4">
-                                    {filteredCards.map((card) => (
+                                    {cards.map((card) => (
                                         <button
                                             key={card.id}
                                             type="button"
                                             onTouchStart={() => {
-                                                console.log('TOUCH Card:', card.storeName);
+                                                console.log('TOUCH:', card.storeName);
                                                 setSelectedCard(card);
                                                 useCard(card.id);
                                             }}
                                             onClick={() => {
-                                                console.log('CLICK Card:', card.storeName);
+                                                console.log('CLICK:', card.storeName);
                                                 setSelectedCard(card);
                                                 useCard(card.id);
                                             }}
-                                            className="bg-white rounded-2xl shadow-md p-4 flex flex-col items-center gap-3 active:bg-gray-50 active:scale-95 transition"
+                                            className="bg-white rounded-2xl shadow-md p-6 flex flex-col items-center gap-3 active:bg-gray-50 active:scale-95 transition-all"
                                         >
                                             <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold">
-                                                {card.logoData || card.storeName.charAt(0).toUpperCase()}
+                                                {card.storeName.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="font-bold text-sm text-center text-gray-800">
                                                 {card.storeName}
@@ -708,69 +197,59 @@
                 );
             }
 
-            // Settings Tab Component
+            function ScanTab() {
+                return (
+                    <div className="flex flex-col h-full bg-gray-50">
+                        <div className="bg-teal text-white p-4 shadow-md">
+                            <h1 className="text-xl font-bold">Test Scanner</h1>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center p-8">
+                            <div className="text-center">
+                                <h2 className="text-xl font-bold mb-4">Voeg Test Cards Toe</h2>
+                                <p className="text-gray-600 mb-6">
+                                    Klik om test cards toe te voegen en te testen of ze werken!
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        addCard({
+                                            storeName: "Albert Heijn",
+                                            barcodeValue: "8710624534011",
+                                            barcodeFormat: "CODE128"
+                                        });
+                                        addCard({
+                                            storeName: "Jumbo",
+                                            barcodeValue: "8712566451234",
+                                            barcodeFormat: "CODE128"
+                                        });
+                                        addCard({
+                                            storeName: "Lidl",
+                                            barcodeValue: "4056489123456",
+                                            barcodeFormat: "CODE128"
+                                        });
+                                        setActiveTab('cards');
+                                    }}
+                                    className="bg-coral text-white px-8 py-4 rounded-full font-bold text-lg"
+                                >
+                                    Voeg 3 Test Cards Toe
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             function SettingsTab() {
-                const [editingCard, setEditingCard] = useState(null);
-
-                const exportData = () => {
-                    const data = {
-                        cards,
-                        settings,
-                        exportDate: new Date().toISOString(),
-                        version: '1.0.0'
-                    };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `pashie-backup-${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                };
-
-                const importData = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            try {
-                                const data = JSON.parse(event.target.result);
-                                if (data.cards) setCards(data.cards);
-                                if (data.settings) setSettings(data.settings);
-                                alert('Data succesvol geÃ¯mporteerd!');
-                            } catch (err) {
-                                alert('Fout bij importeren: ' + err.message);
-                            }
-                        };
-                        reader.readAsText(file);
-                    }
-                };
-
                 return (
                     <div className="flex flex-col h-full bg-gray-50">
                         <div className="bg-teal text-white p-4 shadow-md">
                             <h1 className="text-xl font-bold">Instellingen</h1>
                         </div>
-
-                        <div className="flex-1 overflow-auto p-4 space-y-6">
-                            {/* Sort Settings */}
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-3">Sortering</h3>
-                                <select
-                                    value={settings.sortBy}
-                                    onChange={(e) => setSettings({ ...settings, sortBy: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                                >
-                                    <option value="alphabetical">Alfabetisch</option>
-                                    <option value="dateAdded">Nieuwste eerst</option>
-                                    <option value="mostUsed">Meest gebruikt</option>
-                                </select>
-                            </div>
-
-                            {/* Cards List */}
-                            <div className="bg-white p-4 rounded-lg shadow">
+                        <div className="flex-1 overflow-auto p-4">
+                            <div className="bg-white p-4 rounded-lg shadow mb-4">
                                 <h3 className="font-bold text-lg mb-3">Mijn Pasjes ({cards.length})</h3>
                                 {cards.length === 0 ? (
-                                    <p className="text-gray-500 text-sm">Nog geen pasjes toegevoegd</p>
+                                    <p className="text-gray-500 text-sm">Nog geen pasjes</p>
                                 ) : (
                                     <div className="space-y-2">
                                         {cards.map(card => (
@@ -780,12 +259,9 @@
                                                     <p className="text-xs text-gray-500">{card.barcodeValue}</p>
                                                 </div>
                                                 <button
-                                                    onClick={() => {
-                                                        if (confirm(`${card.storeName} verwijderen?`)) {
-                                                            deleteCard(card.id);
-                                                        }
-                                                    }}
-                                                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                                                    onClick={() => deleteCard(card.id)}
+                                                    type="button"
+                                                    className="bg-red-500 text-white px-3 py-1 rounded text-sm ml-2"
                                                 >
                                                     Verwijder
                                                 </button>
@@ -794,85 +270,34 @@
                                     </div>
                                 )}
                             </div>
-
-                            {/* Backup */}
                             <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-3">Backup</h3>
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={exportData}
-                                        className="w-full bg-turquoise text-white py-2 rounded-lg font-bold"
-                                    >
-                                        ðŸ“¥ Exporteer Data
-                                    </button>
-                                    <label className="block">
-                                        <span className="sr-only">Importeer backup</span>
-                                        <input
-                                            type="file"
-                                            accept=".json"
-                                            onChange={importData}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-gold file:text-white hover:file:bg-opacity-90"
-                                        />
-                                    </label>
-                                </div>
+                                <h3 className="font-bold text-lg mb-2">Test Info</h3>
+                                <p className="text-sm text-gray-700">
+                                    Dit is een vereenvoudigde versie om te testen of cards klikbaar zijn.
+                                </p>
                             </div>
                         </div>
                     </div>
                 );
             }
 
-            // Help Tab Component
             function HelpTab() {
                 return (
                     <div className="flex flex-col h-full bg-gray-50">
                         <div className="bg-teal text-white p-4 shadow-md">
-                            <h1 className="text-xl font-bold">Help & Info</h1>
+                            <h1 className="text-xl font-bold">Help</h1>
                         </div>
-
-                        <div className="flex-1 overflow-auto p-4 space-y-4">
+                        <div className="flex-1 overflow-auto p-4">
                             <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Welkom bij Pashie! ðŸ‘‹</h3>
-                                <p className="text-gray-700 text-sm">
-                                    Pashie is je digitale wallet voor alle membership cards. 
-                                    Geen dikke portemonnee meer - al je pasjes in Ã©Ã©n app!
-                                </p>
-                            </div>
-
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Hoe werkt het?</h3>
-                                <div className="space-y-2 text-sm text-gray-700">
-                                    <p><strong>1.</strong> Ga naar de Scan tab</p>
-                                    <p><strong>2.</strong> Scan de barcode van je membership card</p>
-                                    <p><strong>3.</strong> Voer de winkelnaam in</p>
-                                    <p><strong>4.</strong> Kies een logo of laat leeg</p>
-                                    <p><strong>5.</strong> Opslaan!</p>
-                                    <p className="pt-2"><strong>Gebruik:</strong> Tik op een pasje in de Cards tab om de barcode te tonen</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Tips</h3>
-                                <div className="space-y-1 text-sm text-gray-700">
-                                    <p>â€¢ Zorg voor goede belichting bij scannen</p>
-                                    <p>â€¢ Houd de barcode stil en recht</p>
-                                    <p>â€¢ Gebruik de zoekfunctie voor snelle toegang</p>
-                                    <p>â€¢ Maak regelmatig een backup</p>
-                                    <p>â€¢ De app werkt volledig offline!</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Privacy</h3>
-                                <p className="text-sm text-gray-700">
-                                    Al je data wordt lokaal op je telefoon opgeslagen. 
-                                    Pashie stuurt geen informatie naar externe servers. 
-                                    Jij hebt volledige controle over je gegevens.
-                                </p>
-                            </div>
-
-                            <div className="text-center text-sm text-gray-500 py-4">
-                                <p>Pashie v1.0.0</p>
-                                <p className="mt-1">Made with ðŸ’³ for easy shopping</p>
+                                <h3 className="font-bold text-lg mb-3">Test Stappen</h3>
+                                <ol className="text-sm space-y-2">
+                                    <li>1. Ga naar Scan tab</li>
+                                    <li>2. Klik "Voeg 3 Test Cards Toe"</li>
+                                    <li>3. Ga naar Cards tab</li>
+                                    <li>4. TIK OP EEN CARD!</li>
+                                    <li>5. Barcode zou moeten openen</li>
+                                    <li>6. Onder barcode zie je het nummer</li>
+                                </ol>
                             </div>
                         </div>
                     </div>
@@ -887,42 +312,22 @@
                         {activeTab === 'settings' && <SettingsTab />}
                         {activeTab === 'help' && <HelpTab />}
                     </div>
-
-                    <div className="flex border-t bg-white bottom-nav">
-                        <button 
-                            onClick={() => setActiveTab('scan')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'scan' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <ScanIcon />
-                            <span className="text-xs mt-1">Scan</span>
+                    <div className="flex border-t bg-white py-2">
+                        <button onClick={() => setActiveTab('scan')} type="button"
+                            className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'scan' ? 'text-turquoise' : 'text-gray-400'}`}>
+                            <span className="text-xs">Scan</span>
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('cards')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'cards' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <div className="relative">
-                                <CardsIcon />
-                                {cards.length > 0 && (
-                                    <span className="absolute -top-1 -right-2 bg-coral text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                        {cards.length}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="text-xs mt-1">Cards</span>
+                        <button onClick={() => setActiveTab('cards')} type="button"
+                            className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'cards' ? 'text-turquoise' : 'text-gray-400'}`}>
+                            <span className="text-xs">Cards</span>
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('settings')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'settings' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <SettingsIcon />
-                            <span className="text-xs mt-1">Settings</span>
+                        <button onClick={() => setActiveTab('settings')} type="button"
+                            className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'settings' ? 'text-turquoise' : 'text-gray-400'}`}>
+                            <span className="text-xs">Settings</span>
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('help')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'help' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <HelpIcon />
-                            <span className="text-xs mt-1">Help</span>
+                        <button onClick={() => setActiveTab('help')} type="button"
+                            className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'help' ? 'text-turquoise' : 'text-gray-400'}`}>
+                            <span className="text-xs">Help</span>
                         </button>
                     </div>
                 </div>
