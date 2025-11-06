@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Click Test</title>
+    <style>
+        body { 
+            font-family: -apple-system, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .card-button {
+            background: white;
+            border: 2px solid #4ECDC4;
+            border-radius: 16px;
+            padding: 20px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .card-button:active {
+            transform: scale(0.95);
+            background: #e0f7f7;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #FF6B5A, #4ECDC4);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-center;
+            color: white;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        #result {
+            background: #ffe;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 400px;
+            border-radius: 8px;
+            border: 2px solid #ffa;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">🧪 Card Click Test</h1>
+    <p style="text-align: center;">Tik op een card om te testen!</p>
+    
+    <div id="result">
+        <strong>Status:</strong> Nog geen card getikt
+    </div>
+    
+    <div class="test-grid">
+        <!-- Test 1: Native button met onclick attribute -->
+        <button class="card-button" onclick="cardClicked('Albert Heijn', 'native')">
+            <div class="logo">A</div>
+            <div>Test 1: Native onclick</div>
+        </button>
+        
+        <!-- Test 2: Button met addEventListener -->
+        <button id="test2" class="card-button">
+            <div class="logo">J</div>
+            <div>Test 2: EventListener</div>
+        </button>
+        
+        <!-- Test 3: Div met onclick -->
+        <div class="card-button" onclick="cardClicked('Lidl', 'div-native')">
+            <div class="logo">L</div>
+            <div>Test 3: Div onclick</div>
+        </div>
+        
+        <!-- Test 4: Div met listener -->
+        <div id="test4" class="card-button">
+            <div class="logo">E</div>
+            <div>Test 4: Div listener</div>
+        </div>
+    </div>
+    
+    <script>
+        function cardClicked(store, method) {
+            const result = document.getElementById('result');
+            result.innerHTML = `<strong>✅ GELUKT!</strong><br>
+                Winkel: ${store}<br>
+                Methode: ${method}<br>
+                Tijd: ${new Date().toLocaleTimeString()}`;
+            result.style.background = '#dfd';
+            result.style.borderColor = '#8f8';
+        }
+        
+        // Test 2: Button met addEventListener
+        document.getElementById('test2').addEventListener('click', function() {
+            cardClicked('Jumbo', 'button-listener');
+        });
+        
+        // Test 4: Div met addEventListener
+        document.getElementById('test4').addEventListener('click', function() {
+            cardClicked('Etos', 'div-listener');
+        });
+        
+        // Touch events voor mobiel
+        document.getElementById('test2').addEventListener('touchend', function(e) {
+            e.preventDefault();
+            cardClicked('Jumbo', 'button-touch');
+        });
+        
+        document.getElementById('test4').addEventListener('touchend', function(e) {
+            e.preventDefault();
+            cardClicked('Etos', 'div-touch');
+        });
+    </script>
+</body>
+</html>
