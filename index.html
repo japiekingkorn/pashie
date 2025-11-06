@@ -676,66 +676,26 @@
                                     </button>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', padding: '16px' }}>
-                                    {filteredCards.map((card) => {
-                                        const firstLetter = card.logoData || card.storeName.charAt(0).toUpperCase();
-                                        return (
-                                            <button
-                                                key={card.id}
-                                                onClick={() => {
-                                                    console.log('Card tapped:', card.storeName);
-                                                    setSelectedCard(card);
-                                                    useCard(card.id);
-                                                }}
-                                                style={{
-                                                    WebkitTapHighlightColor: 'rgba(78, 205, 196, 0.3)',
-                                                    touchAction: 'manipulation',
-                                                    border: 'none',
-                                                    padding: '16px',
-                                                    background: 'white',
-                                                    borderRadius: '16px',
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer',
-                                                    minHeight: '140px'
-                                                }}
-                                                className="active:scale-95 active:shadow-lg transition-all duration-150"
-                                            >
-                                                <div 
-                                                    style={{
-                                                        width: '80px',
-                                                        height: '80px',
-                                                        borderRadius: '12px',
-                                                        background: 'linear-gradient(135deg, #FF6B5A 0%, #4ECDC4 100%)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: 'white',
-                                                        fontSize: '2rem',
-                                                        fontWeight: 'bold',
-                                                        marginBottom: '12px',
-                                                        pointerEvents: 'none'
-                                                    }}
-                                                >
-                                                    {firstLetter}
-                                                </div>
-                                                <span 
-                                                    style={{
-                                                        fontWeight: 'bold',
-                                                        fontSize: '0.875rem',
-                                                        textAlign: 'center',
-                                                        color: '#1F2937',
-                                                        pointerEvents: 'none'
-                                                    }}
-                                                >
-                                                    {card.storeName}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
+                                <div className="grid grid-cols-2 gap-4 p-4">
+                                    {filteredCards.map((card) => (
+                                        <button
+                                            key={card.id}
+                                            type="button"
+                                            onClick={() => {
+                                                console.log('✅ Card clicked:', card.storeName);
+                                                setSelectedCard(card);
+                                                useCard(card.id);
+                                            }}
+                                            className="bg-white rounded-2xl shadow-md p-4 flex flex-col items-center gap-3 active:bg-gray-50 active:scale-95 transition"
+                                        >
+                                            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold">
+                                                {card.logoData || card.storeName.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="font-bold text-sm text-center text-gray-800">
+                                                {card.storeName}
+                                            </div>
+                                        </button>
+                                    ))}
                                 </div>
                             )}
                         </div>
