@@ -779,11 +779,11 @@
       };
     }, []);
 
+    // *** hier de aangepaste timeout: altijd na 3s naar handmatige invoer als er nog niks is ***
     function startTimeout() {
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-      // na 2 seconden zonder scan -> naar handmatige invoer-pop-up
       scanTimeoutRef.current = setTimeout(async () => {
-        if (!scanning || step !== "scan" || barcodeValue) return;
+        if (barcodeValue) return; // er is inmiddels een scan, dan niets doen
         try {
           if (html5Ref.current) {
             await html5Ref.current.stop();
@@ -793,13 +793,14 @@
         setScanning(false);
         setBarcodeFormat("MANUAL_ENTRY");
         setStep("details");
-      }, 2000);
+      }, 3000); // 3 seconden
     }
 
     async function startScan() {
       setError(null);
       setManualMode(false);
       setStep("scan");
+      setBarcodeValue(""); // nieuwe scan: oude waarde weg
 
       if (typeof Html5Qrcode === "undefined") {
         setError("Scannerbibliotheek niet geladen. Gebruik handmatige invoer.");
