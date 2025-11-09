@@ -323,7 +323,7 @@
       cursor: pointer;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
 
     .card-title {
@@ -516,10 +516,10 @@
       opacity: 0.8;
     }
 
-    /* Verberg de standaard "T-hoeken" van html5-qrcode */
-    #scan-view .scan-region-highlight,
-    #scan-view .scan-region-highlight-svg,
-    #scan-view .code-outline {
+    /* Verberg de standaard "T-hoeken" van html5-qrcode overal */
+    .scan-region-highlight,
+    .scan-region-highlight-svg,
+    .code-outline {
       display: none !important;
     }
   </style>
@@ -559,7 +559,7 @@
     useEffect(() => { saveStorage("pashie_cards", cards); }, [cards]);
     useEffect(() => { saveStorage("pashie_sort", sortBy); }, [sortBy]);
 
-    // Splash 2x zo lang
+    // Splash wat langer
     useEffect(() => {
       const t = setTimeout(() => setShowSplash(false), 2600);
       return () => clearTimeout(t);
@@ -681,7 +681,6 @@
                 setSelectedCard(card);
                 markUsed(card.id);
               }}
-              onEditCard={updateCard}
             />
           )}
           {activeTab === "settings" && (
@@ -690,6 +689,7 @@
               sortBy={sortBy}
               setSortBy={setSortBy}
               onDeleteCard={deleteCard}
+              onEditCard={updateCard}
             />
           )}
           {activeTab === "help" && <HelpTab />}
@@ -753,6 +753,7 @@
     const [barcodeFormat, setBarcodeFormat] = useState("");
     const [manualMode, setManualMode] = useState(false);
     const html5Ref = useRef(null);
+    const scanTimeoutRef = useRef(null);
 
     useEffect(() => {
       return () => {
@@ -762,8 +763,28 @@
             html5Ref.current.clear().catch(() => {});
           } catch {}
         }
+        if (scanTimeoutRef.current) {
+          clearTimeout(scanTimeoutRef.current);
+        }
       };
     }, []);
+
+    function startTimeout() {
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+      // na 8 seconden zonder scan -> naar handmatige invoer-pop-up
+      scanTimeoutRef.current = setTimeout(async () => {
+        if (!scanning || step !== "scan" || barcodeValue) return;
+        try {
+          if (html5Ref.current) {
+            await html5Ref.current.stop();
+            await html5Ref.current.clear();
+          }
+        } catch {}
+        setScanning(false);
+        setBarcodeFormat("MANUAL_ENTRY");
+        setStep("details");
+      }, 8000);
+    }
 
     async function startScan() {
       setError(null);
@@ -803,11 +824,14 @@
         }
 
         setScanning(true);
+        startTimeout();
 
         await html5Ref.current.start(
           { facingMode: "environment" },
           config,
           (decodedText, decodedResult) => {
+            if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+
             setBarcodeValue(decodedText || "");
 
             const format =
@@ -828,6 +852,7 @@
       } catch (err) {
         console.error(err);
         setScanning(false);
+        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
         setError(
           "Kon de camera niet starten. Controleer je browserinstellingen of gebruik handmatige invoer."
         );
@@ -835,6 +860,7 @@
     }
 
     async function stopScan() {
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       if (!html5Ref.current) {
         setScanning(false);
         return;
@@ -863,6 +889,7 @@
       setBarcodeFormat("");
       setManualMode(false);
       setStep("scan");
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     }
 
     function handleSave() {
@@ -886,9 +913,10 @@
         lastUsed: null
       };
       onSaved(card);
-
       resetForNewScan();
     }
+
+    const hasScannedValue = !!barcodeValue;
 
     return (
       <div>
@@ -938,6 +966,7 @@
                   onClick={() => {
                     setManualMode(m => !m);
                     setError(null);
+                    if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
                   }}
                 >
                   {manualMode ? "Sluit handmatige invoer" : "Handmatig invoeren"}
@@ -969,25 +998,56 @@
           </>
         )}
 
-        {/* Pop-up / overlay na scannen of handmatige invoer */}
+        {/* Pop-up na scannen of na timeout / handmatig */}
         {step === "details" && (
           <div className="fullscreen-overlay">
             <div className="fullscreen-inner">
               <div className="fullscreen-card">
-                <div className="fullscreen-title">Scannen gelukt!</div>
-                <div className="success-box" style={{ textAlign: "left" }}>
-                  <div>
-                    Barcode: <strong>{barcodeValue}</strong>
-                    {barcodeFormat && (
-                      <span className="badge-inline">{barcodeFormat}</span>
-                    )}
-                  </div>
-                  <div className="small" style={{ marginTop: 4 }}>
-                    Klopt dit nummer niet? Je kunt het zo nodig nog aanpassen bij dit pasje later.
-                  </div>
+                <div className="fullscreen-title">
+                  {hasScannedValue ? "Scannen gelukt!" : "Geen scan gevonden"}
                 </div>
 
-                <div style={{ marginBottom: 16, textAlign: "left" }}>
+                <div className="success-box" style={{ textAlign: "left" }}>
+                  {hasScannedValue ? (
+                    <>
+                      <div>
+                        We hebben deze code gelezen:
+                        <br />
+                        <strong>{barcodeValue}</strong>
+                        {barcodeFormat && (
+                          <span className="badge-inline">{barcodeFormat}</span>
+                        )}
+                      </div>
+                      <div className="small" style={{ marginTop: 4 }}>
+                        Klopt dit nummer niet helemaal? Je kunt het hieronder nog aanpassen.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        We konden geen barcode lezen binnen een paar seconden.
+                      </div>
+                      <div className="small" style={{ marginTop: 4 }}>
+                        Geen probleem: vul hieronder de cijfers van de barcode en de winkelnaam in.
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
+                  <div className="field-label">Barcode-nummer</div>
+                  <input
+                    className="input"
+                    value={barcodeValue}
+                    onChange={e => setBarcodeValue(e.target.value)}
+                    placeholder="Bijv. 2620630013850"
+                  />
+                  <p className="helper small">
+                    Dit is het nummer onder de streepjescode op je pasje.
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
                   <div className="field-label">Naam van de winkel</div>
                   <input
                     className="input"
@@ -1022,31 +1082,12 @@
     );
   }
 
-  function CardsTab({ cards, sortBy, onOpenCard, onEditCard }) {
+  function CardsTab({ cards, sortBy, onOpenCard }) {
     const [search, setSearch] = useState("");
-    const [editingCard, setEditingCard] = useState(null);
-    const [editName, setEditName] = useState("");
-    const [editCode, setEditCode] = useState("");
 
     const filtered = cards.filter(c =>
       c.storeName.toLowerCase().includes(search.toLowerCase())
     );
-
-    function startEdit(card, e) {
-      e.stopPropagation();
-      setEditingCard(card);
-      setEditName(card.storeName);
-      setEditCode(card.barcodeValue);
-    }
-
-    function saveEdit() {
-      if (!editingCard) return;
-      onEditCard(editingCard.id, {
-        storeName: editName.trim() || editingCard.storeName,
-        barcodeValue: editCode.trim() || editingCard.barcodeValue
-      });
-      setEditingCard(null);
-    }
 
     return (
       <div>
@@ -1080,27 +1121,7 @@
                 className="card-item"
                 onClick={() => onOpenCard(card)}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 4
-                  }}
-                >
-                  <div className="card-title">{card.storeName}</div>
-                  <button
-                    className="button-secondary"
-                    style={{
-                      padding: "4px 8px",
-                      fontSize: "11px",
-                      borderRadius: "999px"
-                    }}
-                    onClick={e => startEdit(card, e)}
-                  >
-                    ✏️ Bewerken
-                  </button>
-                </div>
+                <div className="card-title">{card.storeName}</div>
                 <div className="card-sub small">Tik om de barcode te tonen</div>
                 {sortBy === "mostUsed" && (
                   <div className="card-sub small">
@@ -1113,58 +1134,15 @@
             ))}
           </div>
         )}
-
-        {/* Overlay voor pasje bewerken */}
-        {editingCard && (
-          <div className="fullscreen-overlay">
-            <div className="fullscreen-inner">
-              <div className="fullscreen-card">
-                <div className="fullscreen-title">Pasje bewerken</div>
-                <div className="fullscreen-format">
-                  Pas de naam of het barcode-nummer aan.
-                </div>
-                <div style={{ marginBottom: 12, textAlign: "left" }}>
-                  <div className="field-label">Winkelnaam</div>
-                  <input
-                    className="input"
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                  />
-                </div>
-                <div style={{ marginBottom: 12, textAlign: "left" }}>
-                  <div className="field-label">Barcode-nummer</div>
-                  <input
-                    className="input"
-                    value={editCode}
-                    onChange={e => setEditCode(e.target.value)}
-                  />
-                  <p className="helper small">
-                    Dit is het nummer dat onder de streepjescode op je pas staat.
-                  </p>
-                </div>
-                <div className="button-row" style={{ justifyContent: "flex-end" }}>
-                  <button
-                    className="button-secondary"
-                    onClick={() => setEditingCard(null)}
-                  >
-                    Annuleer
-                  </button>
-                  <button className="button-primary" onClick={saveEdit}>
-                    💾 Opslaan
-                  </button>
-                </div>
-              </div>
-              <div className="fullscreen-help">
-                Tip: zorg dat het nummer exact overeenkomt met je originele pas.
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
 
-  function SettingsTab({ cards, sortBy, setSortBy, onDeleteCard }) {
+  function SettingsTab({ cards, sortBy, setSortBy, onDeleteCard, onEditCard }) {
+    const [editingCard, setEditingCard] = useState(null);
+    const [editName, setEditName] = useState("");
+    const [editCode, setEditCode] = useState("");
+
     function exportData() {
       const data = {
         cards,
@@ -1201,6 +1179,21 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    function openEdit(card) {
+      setEditingCard(card);
+      setEditName(card.storeName);
+      setEditCode(card.barcodeValue);
+    }
+
+    function saveEdit() {
+      if (!editingCard) return;
+      onEditCard(editingCard.id, {
+        storeName: editName.trim() || editingCard.storeName,
+        barcodeValue: editCode.trim() || editingCard.barcodeValue
+      });
+      setEditingCard(null);
     }
 
     return (
@@ -1278,12 +1271,12 @@
         <div className="settings-box">
           <div className="settings-title">Pasjes beheren</div>
           <div className="settings-text">
-            Verwijder pasjes die je niet meer nodig hebt.
+            Bewerk of verwijder pasjes die je niet meer nodig hebt.
           </div>
           {cards.length === 0 ? (
             <p className="small">Er zijn nog geen pasjes opgeslagen.</p>
           ) : (
-            <div style={{ maxHeight: 220, overflowY: "auto" }}>
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
               {cards
                 .slice()
                 .sort((a, b) => a.storeName.localeCompare(b.storeName))
@@ -1291,44 +1284,56 @@
                   <div
                     key={card.id}
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
                       padding: "6px 0",
                       borderBottom: "1px solid #e2e8f0",
                       fontSize: "13px"
                     }}
                   >
-                    <div>
-                      <div style={{ fontWeight: 600 }}>
-                        {card.storeName}
-                      </div>
-                      <div className="small" style={{ color: "#a0aec0" }}>
-                        {/* barcode-nummer hier eventueel nog tonen voor beheer */}
-                        {card.barcodeValue}
-                      </div>
+                    <div style={{ fontWeight: 600 }}>{card.storeName}</div>
+                    <div className="small" style={{ color: "#a0aec0" }}>
+                      {card.barcodeValue}
                     </div>
-                    <button
-                      className="button-secondary"
+                    <div
                       style={{
-                        background: "#fff5f5",
-                        color: "#c53030",
-                        borderRadius: "999px",
-                        padding: "6px 10px",
-                        fontSize: "12px"
-                      }}
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `Pasje voor "${card.storeName}" verwijderen?`
-                          )
-                        ) {
-                          onDeleteCard(card.id);
-                        }
+                        display: "flex",
+                        gap: 6,
+                        marginTop: 4,
+                        flexWrap: "wrap"
                       }}
                     >
-                      Verwijder
-                    </button>
+                      <button
+                        className="button-secondary"
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: "12px",
+                          borderRadius: "999px"
+                        }}
+                        onClick={() => openEdit(card)}
+                      >
+                        ✏️ Bewerken
+                      </button>
+                      <button
+                        className="button-secondary"
+                        style={{
+                          background: "#fff5f5",
+                          color: "#c53030",
+                          borderRadius: "999px",
+                          padding: "6px 10px",
+                          fontSize: "12px"
+                        }}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `Pasje voor "${card.storeName}" verwijderen?`
+                            )
+                          ) {
+                            onDeleteCard(card.id);
+                          }
+                        }}
+                      >
+                        Verwijder
+                      </button>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -1346,6 +1351,53 @@
             streepjescode invoeren.
           </p>
         </div>
+
+        {/* Overlay voor pasje bewerken */}
+        {editingCard && (
+          <div className="fullscreen-overlay">
+            <div className="fullscreen-inner">
+              <div className="fullscreen-card">
+                <div className="fullscreen-title">Pasje bewerken</div>
+                <div className="fullscreen-format">
+                  Pas de naam of het barcode-nummer aan.
+                </div>
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
+                  <div className="field-label">Winkelnaam</div>
+                  <input
+                    className="input"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                  />
+                </div>
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
+                  <div className="field-label">Barcode-nummer</div>
+                  <input
+                    className="input"
+                    value={editCode}
+                    onChange={e => setEditCode(e.target.value)}
+                  />
+                  <p className="helper small">
+                    Dit is het nummer dat onder de streepjescode op je pas staat.
+                  </p>
+                </div>
+                <div className="button-row" style={{ justifyContent: "flex-end" }}>
+                  <button
+                    className="button-secondary"
+                    onClick={() => setEditingCard(null)}
+                  >
+                    Annuleer
+                  </button>
+                  <button className="button-primary" onClick={saveEdit}>
+                    💾 Opslaan
+                  </button>
+                </div>
+              </div>
+              <div className="fullscreen-help">
+                Tip: zorg dat het nummer exact overeenkomt met je originele pas.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1363,8 +1415,11 @@
           <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
             <li>Ga onderin naar <strong>Scan</strong>.</li>
             <li>Kies of je wilt <strong>scannen</strong> of <strong>handmatig invoeren</strong>.</li>
-            <li>Na een geslaagde scan verschijnt een scherm met “Scannen gelukt!”.</li>
-            <li>Vul de naam van de winkel in en tik op <strong>Pasje opslaan</strong>.</li>
+            <li>
+              Na een geslaagde scan (of een timeout) verschijnt een scherm waar je
+              zowel de barcode als de winkelnaam kunt invullen of aanpassen.
+            </li>
+            <li>Bevestig met <strong>Pasje opslaan</strong>.</li>
           </ul>
         </div>
 
