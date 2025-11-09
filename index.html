@@ -569,6 +569,12 @@
       setCards(prev => [...prev, card]);
     }
 
+    function updateCard(id, updates) {
+      setCards(prev =>
+        prev.map(c => (c.id === id ? { ...c, ...updates } : c))
+      );
+    }
+
     function markUsed(id) {
       setCards(prev =>
         prev.map(c =>
@@ -670,10 +676,12 @@
           {activeTab === "cards" && (
             <CardsTab
               cards={sortedCards()}
+              sortBy={sortBy}
               onOpenCard={card => {
                 setSelectedCard(card);
                 markUsed(card.id);
               }}
+              onEditCard={updateCard}
             />
           )}
           {activeTab === "settings" && (
@@ -781,7 +789,6 @@
           qrbox: { width: 320, height: 160 }
         };
 
-        // Extra hint naar alle bekende formaten als de helper beschikbaar is
         if (window.Html5QrcodeSupportedFormats) {
           config.formatsToSupport = [
             window.Html5QrcodeSupportedFormats.EAN_13,
@@ -887,7 +894,7 @@
       <div>
         {step === "scan" && (
           <>
-            <h2 className="section-title">Nieuw pasje – stap 1</h2>
+            <h2 className="section-title">Nieuw pasje</h2>
             <p className="section-text">
               Scan de barcode van je klantenkaart of vul het nummer handmatig in.
               Daarna kun je de naam van de winkel invullen.
@@ -962,74 +969,84 @@
           </>
         )}
 
+        {/* Pop-up / overlay na scannen of handmatige invoer */}
         {step === "details" && (
-          <>
-            <h2 className="section-title">Nieuw pasje – stap 2</h2>
-            <p className="section-text">
-              Scannen gelukt! Vul hieronder de naam van de winkel in en sla je pasje op.
-            </p>
-
-            <div className="success-box">
-              ✅ <strong>Scannen gelukt!</strong>
-              <br />
-              Barcode: <strong>{barcodeValue}</strong>
-              {barcodeFormat && (
-                <span className="badge-inline">{barcodeFormat}</span>
-              )}
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div className="field-label">Winkelnaam</div>
-              <input
-                className="input"
-                value={storeName}
-                onChange={e => setStoreName(e.target.value)}
-                placeholder="Bijv. Albert Heijn, HEMA, Etos..."
-              />
-              <p className="helper small">
-                Kies een naam waaraan jij het pasje herkent.
-              </p>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div className="field-label">Voorbeeld pasje</div>
-              <div className="settings-box">
-                <div className="card-title">
-                  {storeName || "Winkelnaam"}
-                </div>
-                <div className="card-sub">
-                  {barcodeValue || "Barcode nog niet ingevuld"}
-                </div>
-                {barcodeFormat && (
-                  <div className="card-sub small">
-                    Formaat: {barcodeFormat}
+          <div className="fullscreen-overlay">
+            <div className="fullscreen-inner">
+              <div className="fullscreen-card">
+                <div className="fullscreen-title">Scannen gelukt!</div>
+                <div className="success-box" style={{ textAlign: "left" }}>
+                  <div>
+                    Barcode: <strong>{barcodeValue}</strong>
+                    {barcodeFormat && (
+                      <span className="badge-inline">{barcodeFormat}</span>
+                    )}
                   </div>
-                )}
+                  <div className="small" style={{ marginTop: 4 }}>
+                    Klopt dit nummer niet? Je kunt het zo nodig nog aanpassen bij dit pasje later.
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 16, textAlign: "left" }}>
+                  <div className="field-label">Naam van de winkel</div>
+                  <input
+                    className="input"
+                    value={storeName}
+                    onChange={e => setStoreName(e.target.value)}
+                    placeholder="Bijv. Albert Heijn, HEMA, Etos..."
+                  />
+                  <p className="helper small">
+                    Kies een naam waaraan jij het pasje herkent.
+                  </p>
+                </div>
+
+                {error && <div className="error-box">{error}</div>}
+
+                <div className="button-row" style={{ justifyContent: "flex-end" }}>
+                  <button className="button-secondary" onClick={resetForNewScan}>
+                    Annuleer
+                  </button>
+                  <button className="button-primary" onClick={handleSave}>
+                    ✅ Pasje opslaan
+                  </button>
+                </div>
+              </div>
+
+              <div className="fullscreen-help">
+                Na het opslaan vind je je pasje terug onder <strong>Pasjes</strong>.
               </div>
             </div>
-
-            {error && <div className="error-box">{error}</div>}
-
-            <div className="button-row">
-              <button className="button-primary" onClick={handleSave}>
-                ✅ Pasje opslaan
-              </button>
-              <button className="button-secondary" onClick={resetForNewScan}>
-                🔁 Nog een barcode scannen
-              </button>
-            </div>
-          </>
+          </div>
         )}
       </div>
     );
   }
 
-  function CardsTab({ cards, onOpenCard }) {
+  function CardsTab({ cards, sortBy, onOpenCard, onEditCard }) {
     const [search, setSearch] = useState("");
+    const [editingCard, setEditingCard] = useState(null);
+    const [editName, setEditName] = useState("");
+    const [editCode, setEditCode] = useState("");
 
     const filtered = cards.filter(c =>
       c.storeName.toLowerCase().includes(search.toLowerCase())
     );
+
+    function startEdit(card, e) {
+      e.stopPropagation();
+      setEditingCard(card);
+      setEditName(card.storeName);
+      setEditCode(card.barcodeValue);
+    }
+
+    function saveEdit() {
+      if (!editingCard) return;
+      onEditCard(editingCard.id, {
+        storeName: editName.trim() || editingCard.storeName,
+        barcodeValue: editCode.trim() || editingCard.barcodeValue
+      });
+      setEditingCard(null);
+    }
 
     return (
       <div>
@@ -1063,15 +1080,84 @@
                 className="card-item"
                 onClick={() => onOpenCard(card)}
               >
-                <div className="card-title">{card.storeName}</div>
-                <div className="card-sub">{card.barcodeValue}</div>
-                <div className="card-sub small">
-                  {card.usageCount
-                    ? `${card.usageCount}× gebruikt`
-                    : "Nog niet gebruikt"}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 4
+                  }}
+                >
+                  <div className="card-title">{card.storeName}</div>
+                  <button
+                    className="button-secondary"
+                    style={{
+                      padding: "4px 8px",
+                      fontSize: "11px",
+                      borderRadius: "999px"
+                    }}
+                    onClick={e => startEdit(card, e)}
+                  >
+                    ✏️ Bewerken
+                  </button>
                 </div>
+                <div className="card-sub small">Tik om de barcode te tonen</div>
+                {sortBy === "mostUsed" && (
+                  <div className="card-sub small">
+                    {card.usageCount
+                      ? `${card.usageCount}× gebruikt`
+                      : "Nog niet gebruikt"}
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Overlay voor pasje bewerken */}
+        {editingCard && (
+          <div className="fullscreen-overlay">
+            <div className="fullscreen-inner">
+              <div className="fullscreen-card">
+                <div className="fullscreen-title">Pasje bewerken</div>
+                <div className="fullscreen-format">
+                  Pas de naam of het barcode-nummer aan.
+                </div>
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
+                  <div className="field-label">Winkelnaam</div>
+                  <input
+                    className="input"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                  />
+                </div>
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
+                  <div className="field-label">Barcode-nummer</div>
+                  <input
+                    className="input"
+                    value={editCode}
+                    onChange={e => setEditCode(e.target.value)}
+                  />
+                  <p className="helper small">
+                    Dit is het nummer dat onder de streepjescode op je pas staat.
+                  </p>
+                </div>
+                <div className="button-row" style={{ justifyContent: "flex-end" }}>
+                  <button
+                    className="button-secondary"
+                    onClick={() => setEditingCard(null)}
+                  >
+                    Annuleer
+                  </button>
+                  <button className="button-primary" onClick={saveEdit}>
+                    💾 Opslaan
+                  </button>
+                </div>
+              </div>
+              <div className="fullscreen-help">
+                Tip: zorg dat het nummer exact overeenkomt met je originele pas.
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1218,6 +1304,7 @@
                         {card.storeName}
                       </div>
                       <div className="small" style={{ color: "#a0aec0" }}>
+                        {/* barcode-nummer hier eventueel nog tonen voor beheer */}
                         {card.barcodeValue}
                       </div>
                     </div>
@@ -1276,7 +1363,7 @@
           <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
             <li>Ga onderin naar <strong>Scan</strong>.</li>
             <li>Kies of je wilt <strong>scannen</strong> of <strong>handmatig invoeren</strong>.</li>
-            <li>Na een geslaagde scan zie je “Scannen gelukt!”.</li>
+            <li>Na een geslaagde scan verschijnt een scherm met “Scannen gelukt!”.</li>
             <li>Vul de naam van de winkel in en tik op <strong>Pasje opslaan</strong>.</li>
           </ul>
         </div>
@@ -1300,7 +1387,7 @@
             <li>Lukt scannen niet? Typ het nummer onder de streepjescode in.</li>
           </ul>
           <p className="small" style={{ marginTop: 8 }}>
-            Op sommige telefoons (vooral iPhone) kunnen alleen QR-codes betrouwbaar worden gelezen.
+            Op sommige telefoons (vooral iPhone) kunnen vooral QR-codes betrouwbaar worden gelezen.
             Voor gewone streepjescodes kun je daarom het nummer overnemen; Pashie maakt er dan
             een scanbare barcode van.
           </p>
