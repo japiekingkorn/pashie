@@ -1,212 +1,1407 @@
 <!DOCTYPE html>
 <html lang="nl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pashie – Digital Membership Cards</title>
-    <link rel="manifest" href="manifest.json" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <style>
-      #splash-screen {
-        transition: opacity 0.6s ease;
-      }
-    </style>
-  </head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pashie – membership pasjes</title>
 
-  <body class="bg-[#F9FAFB] text-gray-900 flex flex-col items-center justify-center h-screen">
+  <!-- PWA / icons -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a7b7b">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-    <!-- 🔹 SPLASH SCREEN -->
-    <div
-      id="splash-screen"
-      class="fixed inset-0 flex flex-col items-center justify-center bg-[#1A7B7B] text-white z-50"
-    >
-      <img src="icons/icon-192.png" alt="Pashie Logo" class="w-32 h-32 mb-6" />
-      <h1 class="text-3xl font-semibold">Pashie</h1>
-      <p class="mt-2 text-white/80">Digitale membership cards</p>
-    </div>
+  <!-- React & Babel -->
+  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 🔹 SCAN-SCHERM -->
-    <div id="scan-screen" class="flex flex-col items-center gap-4 hidden">
-      <div class="relative w-full max-w-sm aspect-[3/4]">
-        <div id="reader" class="w-full h-full rounded-xl overflow-hidden bg-black"></div>
+  <!-- html5-qrcode (camera scan) -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-        <!-- Overlay box -->
-        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            class="border-4 border-white/80 rounded-xl w-72 h-40 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
-          ></div>
-        </div>
-      </div>
+  <!-- JsBarcode (streepjescode tonen) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
-      <p class="text-sm text-gray-500 text-center px-4">
-        Plaats de streepjescode binnen het kader zodat deze volledig zichtbaar is.
-      </p>
+  <style>
+    :root {
+      --primary: #1a7b7b;
+      --accent: #ff6b6b;
+      --bg: #f5f7fb;
+      --text: #1a202c;
+      --muted: #718096;
+    }
 
-      <button
-        id="cancel-scan"
-        class="mt-2 px-4 py-2 rounded-full bg-slate-200 text-slate-700 text-sm"
-      >
-        Annuleer
-      </button>
-    </div>
+    * { box-sizing: border-box; }
 
-    <!-- 🔹 FORM-SCHERM -->
-    <div id="form-screen" class="hidden flex flex-col gap-4 w-80">
-      <h2 class="text-xl font-semibold text-center mt-2">Pasje gevonden 🎉</h2>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
 
-      <label class="text-sm">
-        Barcode nummer
-        <input
-          id="barcodeValue"
-          class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-base"
-          readonly
-        />
-      </label>
+    #root {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.08);
+      position: relative;
+    }
 
-      <label class="text-sm">
-        Winkelnaam
-        <input
-          id="storeName"
-          class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-base"
-          placeholder="Bijv. Albert Heijn"
-        />
-      </label>
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-      <div class="flex gap-3 mt-2">
-        <button
-          id="save-card"
-          class="flex-1 px-4 py-2 rounded-full bg-[#FF6B5A] text-white font-medium"
-        >
-          Opslaan
-        </button>
-        <button
-          id="rescan"
-          class="px-4 py-2 rounded-full border border-gray-300 text-gray-700"
-        >
-          Opnieuw scannen
-        </button>
-      </div>
-    </div>
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
 
-    <!-- 🔹 START-SCHERM (voor de eerste klik) -->
-    <div id="start-screen" class="flex flex-col items-center gap-4">
-      <img src="icons/icon-192.png" alt="Pashie Logo" class="w-24 h-24 mt-10" />
-      <h1 class="text-2xl font-semibold">Welkom bij Pashie</h1>
-      <p class="text-gray-600 text-center px-8">
-        Bewaar al je membership cards digitaal. Tik hieronder om een pasje toe te voegen.
-      </p>
-      <button
-        id="start-scan"
-        class="mt-4 px-6 py-3 bg-[#1A7B7B] text-white rounded-full font-medium"
-      >
-        Scan een pasje 📷
-      </button>
-    </div>
+    .header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #ffffffcc;
+      backdrop-filter: blur(10px);
+    }
 
-    <script>
-      // -------------- SPLASHSCREEN -----------------
-      window.addEventListener("load", () => {
-        const splash = document.getElementById("splash-screen");
-        setTimeout(() => {
-          splash.classList.add("opacity-0");
-          setTimeout(() => {
-            splash.style.display = "none";
-          }, 800);
-        }, 4500); // 4,5 sec
-      });
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-      // -------------- SCANNER -----------------
-      let html5QrCode = null;
+    .header-logo-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: #e6fffa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(26, 123, 123, 0.25);
+      flex-shrink: 0;
+    }
 
-      const startScreen = document.getElementById("start-screen");
-      const scanScreen = document.getElementById("scan-screen");
-      const formScreen = document.getElementById("form-screen");
+    .header-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
 
-      document.getElementById("start-scan").addEventListener("click", () => {
-        startScanner();
-      });
+    .header-logo-fallback {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a7b7b;
+    }
 
-      document.getElementById("cancel-scan").addEventListener("click", () => {
-        stopScanner();
-        showStartScreen();
-      });
+    .header-texts {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
 
-      document.getElementById("rescan").addEventListener("click", () => {
-        startScanner();
-      });
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
 
-      document.getElementById("save-card").addEventListener("click", () => {
-        const barcodeValue = document.getElementById("barcodeValue").value;
-        const storeName = document.getElementById("storeName").value.trim();
+    .header-title span.logo-name {
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
-        if (!storeName) {
-          alert("Voer eerst een winkelnaam in.");
-          return;
-        }
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0;
+    }
 
-        // TODO: hier komt later de opslag in localStorage
-        console.log("Pasje opgeslagen:", { barcodeValue, storeName });
+    .bottom-nav {
+      display: flex;
+      border-top: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
 
-        alert("Pasje opgeslagen!");
-        showStartScreen();
-      });
+    .nav-button {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      background: none;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+    }
 
-      function startScanner() {
-        startScreen.classList.add("hidden");
-        formScreen.classList.add("hidden");
-        scanScreen.classList.remove("hidden");
+    .nav-button span { font-size: 11px; }
 
-        if (!html5QrCode) {
-          html5QrCode = new Html5Qrcode("reader");
-        }
+    .nav-button.nav-active {
+      color: var(--primary);
+      font-weight: 600;
+    }
 
-        const config = {
-          fps: 10,
-          qrbox: { width: 300, height: 150 },
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.CODE_39
-          ],
-        };
+    .nav-icon { font-size: 18px; }
 
-        html5QrCode.start(
-          { facingMode: "environment" },
-          config,
-          onScanSuccess,
-          onScanFailure
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+
+    .section-text {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      outline: none;
+    }
+
+    .input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(26, 123, 123, 0.25);
+    }
+
+    .helper {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .button-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .button-secondary {
+      background: #edf2f7;
+      color: #2d3748;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .scan-box {
+      border-radius: 12px;
+      border: 1px dashed #cbd5e0;
+      padding: 12px;
+      background: #f7fafc;
+      margin-bottom: 16px;
+    }
+
+    .scan-view-container {
+      position: relative;
+      margin-top: 8px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .scan-view {
+      width: 100%;
+      height: 260px;
+      background: #000;
+    }
+
+    .scan-guides {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .scan-guides-box {
+      width: 80%;
+      height: 40%;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+    }
+
+    .scan-guides-text {
+      position: absolute;
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: #f7fafc;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    }
+
+    .error-box {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #fff5f5;
+      color: #c53030;
+      font-size: 12px;
+    }
+
+    .success-box {
+      margin-bottom: 14px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #e6fffa;
+      color: #22543d;
+      font-size: 13px;
+    }
+
+    .badge-inline {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #c6f6d5;
+      color: #22543d;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .card-item {
+      border-radius: 12px;
+      padding: 10px;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty-icon {
+      font-size: 38px;
+      margin-bottom: 8px;
+    }
+
+    .fullscreen-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .fullscreen-inner {
+      max-width: 420px;
+      width: 100%;
+      padding: 24px 16px;
+      text-align: center;
+      color: #f7fafc;
+    }
+
+    .fullscreen-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 16px;
+      color: #1a202c;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .fullscreen-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .fullscreen-format {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .fullscreen-barcode {
+      width: 100%;
+      height: 140px;
+    }
+
+    .fullscreen-value {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 15px;
+      letter-spacing: 0.2em;
+      margin-top: 10px;
+    }
+
+    .fullscreen-help {
+      font-size: 11px;
+      color: #e2e8f0;
+      margin-top: 12px;
+    }
+
+    .fullscreen-close-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: #e2e8f0;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.4);
+      font-size: 11px;
+    }
+
+    .settings-box {
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #f7fafc;
+    }
+
+    .settings-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .settings-text {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .small { font-size: 11px; }
+
+    .search-input { margin-bottom: 12px; }
+
+    @media (max-width: 360px) {
+      .card-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Splashscreen */
+    .splash-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, #ff6b6b 0, #1a7b7b 45%, #0b2545 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      color: #f7fafc;
+    }
+
+    .splash-inner {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .splash-logo-circle {
+      width: 96px;
+      height: 96px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .splash-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .splash-logo-fallback {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+    }
+
+    .splash-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      text-indent: 0.24em;
+      margin-bottom: 6px;
+    }
+
+    .splash-subtitle {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.9;
+      margin-bottom: 10px;
+    }
+
+    .splash-tagline {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+
+  function loadStorage(key, fallback) {
+    try {
+      const val = localStorage.getItem(key);
+      return val ? JSON.parse(val) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function saveStorage(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  }
+
+  function App() {
+    const [activeTab, setActiveTab] = useState("cards");
+    const [cards, setCards] = useState(() =>
+      loadStorage("pashie_cards", [])
+    );
+    const [sortBy, setSortBy] = useState(() =>
+      loadStorage("pashie_sort", "alphabetical")
+    );
+    const [selectedCard, setSelectedCard] = useState(null);
+    const [showSplash, setShowSplash] = useState(true);
+
+    useEffect(() => { saveStorage("pashie_cards", cards); }, [cards]);
+    useEffect(() => { saveStorage("pashie_sort", sortBy); }, [sortBy]);
+
+    useEffect(() => {
+      const t = setTimeout(() => setShowSplash(false), 1300);
+      return () => clearTimeout(t);
+    }, []);
+
+    function addCard(card) {
+      setCards(prev => [...prev, card]);
+    }
+
+    function markUsed(id) {
+      setCards(prev =>
+        prev.map(c =>
+          c.id === id
+            ? {
+                ...c,
+                lastUsed: new Date().toISOString(),
+                usageCount: (c.usageCount || 0) + 1
+              }
+            : c
+        )
+      );
+    }
+
+    function deleteCard(id) {
+      setCards(prev => prev.filter(c => c.id !== id));
+    }
+
+    function sortedCards() {
+      const arr = [...cards];
+      if (sortBy === "alphabetical") {
+        return arr.sort((a, b) => a.storeName.localeCompare(b.storeName));
+      } else if (sortBy === "date") {
+        return arr.sort(
+          (a, b) => new Date(b.dateAdded) - new Date(a.dateAdded)
+        );
+      } else if (sortBy === "mostUsed") {
+        return arr.sort(
+          (a, b) => (b.usageCount || 0) - (a.usageCount || 0)
         );
       }
+      return arr;
+    }
 
-      function stopScanner() {
-        if (!html5QrCode) return;
-        html5QrCode
-          .stop()
-          .then(() => html5QrCode.clear())
-          .catch((err) => console.error("Stop scanner error", err));
+    return (
+      <div className="app">
+        {showSplash && (
+          <div className="splash-overlay">
+            <div className="splash-inner">
+              <div className="splash-logo-circle">
+                <img
+                  src="icons/icon-192.png"
+                  alt="Pashie logo"
+                  className="splash-logo-img"
+                  onError={e => {
+                    e.target.style.display = "none";
+                    const parent = e.target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = "<div class='splash-logo-fallback'>P</div>";
+                    }
+                  }}
+                />
+              </div>
+              <div className="splash-name">Pashie</div>
+              <div className="splash-subtitle">Membership cards in your pocket</div>
+              <div className="splash-tagline">
+                💳 Eén plek voor al je pasjes – lokaal, simpel, snel.
+              </div>
+            </div>
+          </div>
+        )}
+
+        <header className="header">
+          <div className="header-inner">
+            <div className="header-logo-box">
+              <img
+                src="icons/icon-192.png"
+                alt="Pashie logo"
+                className="header-logo-img"
+                onError={e => {
+                  e.target.style.display = "none";
+                  const parent = e.target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = "<div class='header-logo-fallback'>P</div>";
+                  }
+                }}
+              />
+            </div>
+            <div className="header-texts">
+              <h1 className="header-title">
+                <span className="logo-name">Pashie</span>
+              </h1>
+              <p className="header-subtitle">
+                Je klantenkaarten altijd bij de hand – lokaal op je telefoon.
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <main className="content">
+          {activeTab === "scan" && (
+            <ScanTab
+              onSaved={card => {
+                addCard(card);
+                setActiveTab("cards");
+              }}
+            />
+          )}
+          {activeTab === "cards" && (
+            <CardsTab
+              cards={sortedCards()}
+              onOpenCard={card => {
+                setSelectedCard(card);
+                markUsed(card.id);
+              }}
+            />
+          )}
+          {activeTab === "settings" && (
+            <SettingsTab
+              cards={cards}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              onDeleteCard={deleteCard}
+            />
+          )}
+          {activeTab === "help" && <HelpTab />}
+        </main>
+
+        <nav className="bottom-nav">
+          <button
+            className={
+              "nav-button " + (activeTab === "scan" ? "nav-active" : "")
+            }
+            onClick={() => setActiveTab("scan")}
+          >
+            <div className="nav-icon">📷</div>
+            <span>Scan</span>
+          </button>
+          <button
+            className={
+              "nav-button " + (activeTab === "cards" ? "nav-active" : "")
+            }
+            onClick={() => setActiveTab("cards")}
+          >
+            <div className="nav-icon">💳</div>
+            <span>Pasjes</span>
+          </button>
+          <button
+            className={
+              "nav-button " + (activeTab === "settings" ? "nav-active" : "")
+            }
+            onClick={() => setActiveTab("settings")}
+          >
+            <div className="nav-icon">⚙️</div>
+            <span>Instellingen</span>
+          </button>
+          <button
+            className={
+              "nav-button " + (activeTab === "help" ? "nav-active" : "")
+            }
+            onClick={() => setActiveTab("help")}
+          >
+            <div className="nav-icon">❓</div>
+            <span>Help</span>
+          </button>
+        </nav>
+
+        {selectedCard && (
+          <BarcodeOverlay
+            card={selectedCard}
+            onClose={() => setSelectedCard(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  function ScanTab({ onSaved }) {
+    const [step, setStep] = useState("scan"); // "scan" | "details"
+    const [scanning, setScanning] = useState(false);
+    const [error, setError] = useState(null);
+    const [storeName, setStoreName] = useState("");
+    const [barcodeValue, setBarcodeValue] = useState("");
+    const [barcodeFormat, setBarcodeFormat] = useState("");
+    const [manualMode, setManualMode] = useState(false);
+    const html5Ref = useRef(null);
+
+    useEffect(() => {
+      return () => {
+        if (html5Ref.current) {
+          try {
+            html5Ref.current.stop().catch(() => {});
+            html5Ref.current.clear().catch(() => {});
+          } catch {}
+        }
+      };
+    }, []);
+
+    async function startScan() {
+      setError(null);
+      setManualMode(false);
+      setStep("scan");
+
+      if (typeof Html5Qrcode === "undefined") {
+        setError("Scannerbibliotheek niet geladen. Gebruik handmatige invoer.");
+        return;
       }
 
-      function onScanSuccess(decodedText, decodedResult) {
-        console.log("Scan success:", decodedText);
-        stopScanner();
+      try {
+        const id = "scan-view";
 
-        scanScreen.classList.add("hidden");
-        formScreen.classList.remove("hidden");
+        if (!html5Ref.current) {
+          html5Ref.current = new Html5Qrcode(id, {
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+          });
+        }
 
-        document.getElementById("barcodeValue").value = decodedText;
+        let config = {
+          fps: 10,
+          qrbox: { width: 300, height: 130 }
+        };
+
+        if (window.Html5QrcodeSupportedFormats) {
+          config.formatsToSupport = [
+            window.Html5QrcodeSupportedFormats.EAN_13,
+            window.Html5QrcodeSupportedFormats.EAN_8,
+            window.Html5QrcodeSupportedFormats.CODE_128,
+            window.Html5QrcodeSupportedFormats.CODE_39,
+            window.Html5QrcodeSupportedFormats.UPC_A,
+            window.Html5QrcodeSupportedFormats.UPC_E,
+            window.Html5QrcodeSupportedFormats.ITF,
+            window.Html5QrcodeSupportedFormats.QR_CODE
+          ];
+        }
+
+        setScanning(true);
+
+        await html5Ref.current.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText, decodedResult) => {
+            setBarcodeValue(decodedText || "");
+
+            const format =
+              decodedResult?.result?.format?.formatName ||
+              decodedResult?.format?.formatName ||
+              "UNKNOWN";
+            setBarcodeFormat(format);
+
+            html5Ref.current
+              .stop()
+              .then(() => setScanning(false))
+              .catch(() => setScanning(false));
+
+            setStep("details");
+          },
+          () => { /* tussenfouten negeren */ }
+        );
+      } catch (err) {
+        console.error(err);
+        setScanning(false);
+        setError(
+          "Kon de camera niet starten. Controleer je browserinstellingen of gebruik handmatige invoer."
+        );
+      }
+    }
+
+    async function stopScan() {
+      if (!html5Ref.current) {
+        setScanning(false);
+        return;
+      }
+      try {
+        await html5Ref.current.stop();
+        await html5Ref.current.clear();
+      } catch {}
+      setScanning(false);
+    }
+
+    function goToDetailsFromManual() {
+      setError(null);
+      if (!barcodeValue.trim()) {
+        setError("Vul eerst een barcode-nummer in.");
+        return;
+      }
+      setBarcodeFormat("MANUAL_ENTRY");
+      setStep("details");
+    }
+
+    function resetForNewScan() {
+      setError(null);
+      setStoreName("");
+      setBarcodeValue("");
+      setBarcodeFormat("");
+      setManualMode(false);
+      setStep("scan");
+    }
+
+    function handleSave() {
+      setError(null);
+      if (!storeName.trim()) {
+        setError("Vul een winkelnaam in.");
+        return;
+      }
+      if (!barcodeValue.trim()) {
+        setError("Geen barcode ingevuld. Scan of typ de code.");
+        return;
       }
 
-      function onScanFailure(error) {
-        // niks doen, blijven scannen
+      const card = {
+        id: Date.now().toString(),
+        storeName: storeName.trim(),
+        barcodeValue: barcodeValue.trim(),
+        barcodeFormat: barcodeFormat || "MANUAL_ENTRY",
+        dateAdded: new Date().toISOString(),
+        usageCount: 0,
+        lastUsed: null
+      };
+      onSaved(card);
+
+      resetForNewScan();
+    }
+
+    return (
+      <div>
+        {step === "scan" && (
+          <>
+            <h2 className="section-title">Nieuw pasje – stap 1</h2>
+            <p className="section-text">
+              Scan de barcode van je klantenkaart of vul het nummer handmatig in.
+              Daarna kun je de naam van de winkel invullen.
+            </p>
+
+            <div className="scan-box">
+              <div className="field-label">Barcode scannen (camera)</div>
+              <div className="scan-view-container">
+                <div
+                  id="scan-view"
+                  className="scan-view"
+                  style={{ display: scanning ? "block" : "block" }}
+                ></div>
+                {scanning && (
+                  <div className="scan-guides">
+                    <div className="scan-guides-box"></div>
+                    <div className="scan-guides-text">
+                      Plaats de streepjescode of QR-code in het vak
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!scanning && (
+                <p className="helper small">
+                  Geen scan? Let op licht, houd de barcode stil en probeer evt. het fysieke pasje i.p.v. een scherm.
+                </p>
+              )}
+
+              <div className="button-row">
+                {!scanning ? (
+                  <button className="button-secondary" onClick={startScan}>
+                    📷 Start scannen
+                  </button>
+                ) : (
+                  <button className="button-secondary" onClick={stopScan}>
+                    ✋ Stop scannen
+                  </button>
+                )}
+                <button
+                  className="button-secondary"
+                  onClick={() => {
+                    setManualMode(m => !m);
+                    setError(null);
+                  }}
+                >
+                  {manualMode ? "Sluit handmatige invoer" : "Handmatig invoeren"}
+                </button>
+              </div>
+
+              {error && <div className="error-box">{error}</div>}
+            </div>
+
+            {manualMode && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="field-label">Barcode (nummers onder streepjescode)</div>
+                <input
+                  className="input"
+                  value={barcodeValue}
+                  onChange={e => setBarcodeValue(e.target.value)}
+                  placeholder="Bijv. 2620630013850"
+                />
+                <p className="helper small">
+                  Dit is het nummer onder de streepjescode op je pasje. Je kunt het ook overnemen van een andere app.
+                </p>
+                <div className="button-row">
+                  <button className="button-primary" onClick={goToDetailsFromManual}>
+                    ➡︎ Ga verder
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {step === "details" && (
+          <>
+            <h2 className="section-title">Nieuw pasje – stap 2</h2>
+            <p className="section-text">
+              Scannen gelukt! Vul hieronder de naam van de winkel in en sla je pasje op.
+            </p>
+
+            <div className="success-box">
+              ✅ <strong>Scannen gelukt!</strong>
+              <br />
+              Barcode: <strong>{barcodeValue}</strong>
+              {barcodeFormat && (
+                <span className="badge-inline">{barcodeFormat}</span>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div className="field-label">Winkelnaam</div>
+              <input
+                className="input"
+                value={storeName}
+                onChange={e => setStoreName(e.target.value)}
+                placeholder="Bijv. Albert Heijn, HEMA, Etos..."
+              />
+              <p className="helper small">
+                Kies een naam waaraan jij het pasje herkent.
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div className="field-label">Voorbeeld pasje</div>
+              <div className="settings-box">
+                <div className="card-title">
+                  {storeName || "Winkelnaam"}
+                </div>
+                <div className="card-sub">
+                  {barcodeValue || "Barcode nog niet ingevuld"}
+                </div>
+                {barcodeFormat && (
+                  <div className="card-sub small">
+                    Formaat: {barcodeFormat}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {error && <div className="error-box">{error}</div>}
+
+            <div className="button-row">
+              <button className="button-primary" onClick={handleSave}>
+                ✅ Pasje opslaan
+              </button>
+              <button className="button-secondary" onClick={resetForNewScan}>
+                🔁 Nog een barcode scannen
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function CardsTab({ cards, onOpenCard }) {
+    const [search, setSearch] = useState("");
+
+    const filtered = cards.filter(c =>
+      c.storeName.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+      <div>
+        <h2 className="section-title">Mijn pasjes</h2>
+        <p className="section-text">
+          Tik op een pasje om de barcode schermvullend te tonen.
+        </p>
+
+        <div className="search-input">
+          <input
+            className="input"
+            placeholder="Zoek op winkelnaam..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">💳</div>
+            <div>
+              Nog geen pasjes gevonden. Voeg eerst een pasje toe via{" "}
+              <strong>Scan</strong>.
+            </div>
+          </div>
+        ) : (
+          <div className="card-grid">
+            {filtered.map(card => (
+              <div
+                key={card.id}
+                className="card-item"
+                onClick={() => onOpenCard(card)}
+              >
+                <div className="card-title">{card.storeName}</div>
+                <div className="card-sub">{card.barcodeValue}</div>
+                <div className="card-sub small">
+                  {card.usageCount
+                    ? `${card.usageCount}× gebruikt`
+                    : "Nog niet gebruikt"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function SettingsTab({ cards, sortBy, setSortBy, onDeleteCard }) {
+    function exportData() {
+      const data = {
+        cards,
+        sortBy,
+        exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json"
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pashie-backup.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(ev) {
+      const file = ev.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.cards || !Array.isArray(data.cards)) {
+            alert("Ongeldig bestand.");
+            return;
+          }
+          saveStorage("pashie_cards", data.cards);
+          saveStorage("pashie_sort", data.sortBy || "alphabetical");
+          location.reload();
+        } catch {
+          alert("Kon het bestand niet lezen.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    return (
+      <div>
+        <h2 className="section-title">Instellingen</h2>
+        <p className="section-text">
+          Pas sortering aan en maak een back-up van je pasjes.
+        </p>
+
+        <div className="settings-box">
+          <div className="settings-title">Sortering</div>
+          <div className="settings-text">
+            Kies hoe je pasjes standaard gesorteerd worden.
+          </div>
+          <div className="button-row">
+            <button
+              className="button-secondary"
+              style={{
+                background:
+                  sortBy === "alphabetical" ? "#e6fffa" : "#edf2f7",
+                color: sortBy === "alphabetical" ? "#285e61" : "#2d3748"
+              }}
+              onClick={() => setSortBy("alphabetical")}
+            >
+              A → Z
+            </button>
+            <button
+              className="button-secondary"
+              style={{
+                background: sortBy === "date" ? "#e6fffa" : "#edf2f7",
+                color: sortBy === "date" ? "#285e61" : "#2d3748"
+              }}
+              onClick={() => setSortBy("date")}
+            >
+              Nieuwste eerst
+            </button>
+            <button
+              className="button-secondary"
+              style={{
+                background:
+                  sortBy === "mostUsed" ? "#e6fffa" : "#edf2f7",
+                color: sortBy === "mostUsed" ? "#285e61" : "#2d3748"
+              }}
+              onClick={() => setSortBy("mostUsed")}
+            >
+              Meest gebruikt
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-box">
+          <div className="settings-title">Back-up & herstel</div>
+          <div className="settings-text">
+            Maak een exportbestand of herstel vanaf een eerder bestand.
+          </div>
+          <div className="button-row">
+            <button className="button-secondary" onClick={exportData}>
+              💾 Exporteer
+            </button>
+            <label className="button-secondary" style={{ cursor: "pointer" }}>
+              📂 Importeer
+              <input
+                type="file"
+                accept="application/json"
+                style={{ display: "none" }}
+                onChange={importData}
+              />
+            </label>
+          </div>
+          <p className="helper small">
+            Let op: bij herstel wordt de huidige lijst pasjes overschreven.
+          </p>
+        </div>
+
+        <div className="settings-box">
+          <div className="settings-title">Pasjes beheren</div>
+          <div className="settings-text">
+            Verwijder pasjes die je niet meer nodig hebt.
+          </div>
+          {cards.length === 0 ? (
+            <p className="small">Er zijn nog geen pasjes opgeslagen.</p>
+          ) : (
+            <div style={{ maxHeight: 220, overflowY: "auto" }}>
+              {cards
+                .slice()
+                .sort((a, b) => a.storeName.localeCompare(b.storeName))
+                .map(card => (
+                  <div
+                    key={card.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "6px 0",
+                      borderBottom: "1px solid #e2e8f0",
+                      fontSize: "13px"
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600 }}>
+                        {card.storeName}
+                      </div>
+                      <div className="small" style={{ color: "#a0aec0" }}>
+                        {card.barcodeValue}
+                      </div>
+                    </div>
+                    <button
+                      className="button-secondary"
+                      style={{
+                        background: "#fff5f5",
+                        color: "#c53030",
+                        borderRadius: "999px",
+                        padding: "6px 10px",
+                        fontSize: "12px"
+                      }}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Pasje voor "${card.storeName}" verwijderen?`
+                          )
+                        ) {
+                          onDeleteCard(card.id);
+                        }
+                      }}
+                    >
+                      Verwijder
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        <div className="settings-box">
+          <div className="settings-title">Over Pashie</div>
+          <div className="settings-text">
+            Pashie bewaart je pasjes alleen lokaal op dit apparaat. Geen
+            accounts, geen tracking.
+          </div>
+          <p className="small">
+            Werkt het scannen niet? Je kunt altijd handmatig het nummer onder de
+            streepjescode invoeren.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  function HelpTab() {
+    return (
+      <div>
+        <h2 className="section-title">Handleiding</h2>
+        <p className="section-text">
+          Een korte uitleg hoe je Pashie gebruikt en hoe je er een PWA van maakt.
+        </p>
+
+        <div className="settings-box">
+          <div className="settings-title">1. Nieuw pasje toevoegen</div>
+          <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
+            <li>Ga onderin naar <strong>Scan</strong>.</li>
+            <li>Kies of je wilt <strong>scannen</strong> of <strong>handmatig invoeren</strong>.</li>
+            <li>Na een geslaagde scan zie je “Scannen gelukt!”.</li>
+            <li>Vul de naam van de winkel in en tik op <strong>Pasje opslaan</strong>.</li>
+          </ul>
+        </div>
+
+        <div className="settings-box">
+          <div className="settings-title">2. Pasje gebruiken in de winkel</div>
+          <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
+            <li>Ga naar <strong>Pasjes</strong>.</li>
+            <li>Tik op het pasje dat je nodig hebt.</li>
+            <li>De barcode wordt schermvullend getoond.</li>
+            <li>Houd je telefoon onder de kassascanner. Zet je helderheid zo nodig wat hoger.</li>
+          </ul>
+        </div>
+
+        <div className="settings-box">
+          <div className="settings-title">3. Tips voor barcodes scannen</div>
+          <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
+            <li>Zorg voor voldoende licht en houd de kaart of telefoon stil.</li>
+            <li>Leg de streepjescode in de witte box in beeld.</li>
+            <li>Fysieke pasjes werken vaak beter dan een foto of screenshot.</li>
+            <li>Lukt scannen niet? Typ het nummer onder de streepjescode in.</li>
+          </ul>
+        </div>
+
+        <div className="settings-box">
+          <div className="settings-title">4. Pashie als PWA (app) op je telefoon</div>
+          <p className="settings-text">
+            Pashie is een Progressive Web App. Je kunt hem als “app” op je
+            startscherm zetten:
+          </p>
+          <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
+            <li>
+              <strong>iPhone (Safari)</strong><br />
+              Open Pashie in Safari → tik op de <strong>Deel</strong>-knop
+              (vierkant met pijltje omhoog) → kies <strong>Voeg toe aan beginscherm</strong>.
+            </li>
+            <li>
+              <strong>Android (Chrome)</strong><br />
+              Open Pashie in Chrome → tik op de drie puntjes rechtsboven →
+              kies <strong>Toevoegen aan startscherm</strong> of <strong>Installeer app</strong>.
+            </li>
+          </ul>
+          <p className="small" style={{ marginTop: 8 }}>
+            Daarna verschijnt Pashie als icoon op je startscherm en voelt het
+            als een gewone app.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  function BarcodeOverlay({ card, onClose }) {
+    const svgRef = useRef(null);
+
+    useEffect(() => {
+      const el = svgRef.current;
+      if (!el) return;
+
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
       }
 
-      function showStartScreen() {
-        scanScreen.classList.add("hidden");
-        formScreen.classList.add("hidden");
-        startScreen.classList.remove("hidden");
+      const value = card.barcodeValue || "";
+
+      if (typeof JsBarcode === "function") {
+        let format = "CODE128";
+        const map = {
+          EAN_13: "EAN13",
+          EAN_8: "EAN8",
+          CODE_128: "CODE128",
+          CODE_39: "CODE39",
+          UPC_A: "UPC",
+          UPC_E: "UPC",
+          MANUAL_ENTRY: "CODE128"
+        };
+        if (card.barcodeFormat && map[card.barcodeFormat]) {
+          format = map[card.barcodeFormat];
+        }
+        try {
+          JsBarcode(el, value, {
+            format,
+            width: 2,
+            height: 100,
+            displayValue: true,
+            margin: 10,
+            fontSize: 18
+          });
+          return;
+        } catch (e) {
+          console.error("JsBarcode error:", e);
+        }
       }
-    </script>
-  </body>
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const textNode = document.createElementNS(svgNS, "text");
+      textNode.setAttribute("x", "50%");
+      textNode.setAttribute("y", "50%");
+      textNode.setAttribute("dominant-baseline", "middle");
+      textNode.setAttribute("text-anchor", "middle");
+      textNode.setAttribute("font-size", "24");
+      textNode.setAttribute("font-family", "monospace");
+      textNode.textContent = value || "GEEN BARCODE";
+      el.appendChild(textNode);
+    }, [card]);
+
+    return (
+      <div className="fullscreen-overlay">
+        <div className="fullscreen-inner">
+          <div className="fullscreen-close-row">
+            <button className="button-secondary" onClick={onClose}>
+              ⬅︎ Terug
+            </button>
+            <div className="chip">
+              <span>🔍 Kassascanner</span>
+            </div>
+          </div>
+
+          <div className="fullscreen-card">
+            <div className="fullscreen-title">{card.storeName}</div>
+            <div className="fullscreen-format">
+              Formaat: {card.barcodeFormat || "onbekend"}
+            </div>
+            <svg
+              ref={svgRef}
+              className="fullscreen-barcode"
+              preserveAspectRatio="xMidYMid meet"
+            ></svg>
+            <div className="fullscreen-value">{card.barcodeValue}</div>
+          </div>
+
+          <div className="fullscreen-help">
+            Houd dit scherm onder de scanner bij de kassa.
+            <br />
+            Tip: zet je schermhelderheid wat hoger.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
 </html>
