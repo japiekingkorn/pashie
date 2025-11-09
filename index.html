@@ -6,6 +6,12 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Pashie – membership pasjes</title>
 
+  <!-- PWA / icons -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a7b7b">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
   <!-- React & Babel -->
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
@@ -45,6 +51,7 @@
       display: flex;
       flex-direction: column;
       box-shadow: 0 0 30px rgba(0, 0, 0, 0.08);
+      position: relative;
     }
 
     .app {
@@ -60,18 +67,68 @@
     }
 
     .header {
-      padding: 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #ffffffcc;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-logo-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: #e6fffa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(26, 123, 123, 0.2);
+      flex-shrink: 0;
+    }
+
+    .header-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .header-logo-fallback {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a7b7b;
+    }
+
+    .header-texts {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .header-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
-      margin: 0 0 4px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-title span.logo-name {
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .header-subtitle {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       margin: 0;
     }
@@ -359,6 +416,71 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* Splashscreen */
+    .splash-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, #ff6b6b 0, #1a7b7b 45%, #0b2545 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      color: #f7fafc;
+    }
+
+    .splash-inner {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .splash-logo-circle {
+      width: 96px;
+      height: 96px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .splash-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .splash-logo-fallback {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+    }
+
+    .splash-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      text-indent: 0.24em;
+      margin-bottom: 6px;
+    }
+
+    .splash-subtitle {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.9;
+      margin-bottom: 10px;
+    }
+
+    .splash-tagline {
+      font-size: 11px;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
@@ -391,6 +513,7 @@
       loadStorage("pashie_sort", "alphabetical")
     );
     const [selectedCard, setSelectedCard] = useState(null);
+    const [showSplash, setShowSplash] = useState(true);
 
     useEffect(() => {
       saveStorage("pashie_cards", cards);
@@ -399,6 +522,11 @@
     useEffect(() => {
       saveStorage("pashie_sort", sortBy);
     }, [sortBy]);
+
+    useEffect(() => {
+      const t = setTimeout(() => setShowSplash(false), 1300);
+      return () => clearTimeout(t);
+    }, []);
 
     function addCard(card) {
       setCards(prev => [...prev, card]);
@@ -440,11 +568,57 @@
 
     return (
       <div className="app">
+        {showSplash && (
+          <div className="splash-overlay">
+            <div className="splash-inner">
+              <div className="splash-logo-circle">
+                <img
+                  src="icons/icon-192.png"
+                  alt="Pashie logo"
+                  className="splash-logo-img"
+                  onError={e => {
+                    e.target.style.display = "none";
+                    const parent = e.target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = "<div class='splash-logo-fallback'>P</div>";
+                    }
+                  }}
+                />
+              </div>
+              <div className="splash-name">Pashie</div>
+              <div className="splash-subtitle">Membership cards in your pocket</div>
+              <div className="splash-tagline">
+                💳 Eén plek voor al je pasjes – lokaal, simpel, snel.
+              </div>
+            </div>
+          </div>
+        )}
+
         <header className="header">
-          <h1 className="header-title">Pashie</h1>
-          <p className="header-subtitle">
-            Je klantenkaarten altijd bij de hand – lokaal op je telefoon.
-          </p>
+          <div className="header-inner">
+            <div className="header-logo-box">
+              <img
+                src="icons/icon-192.png"
+                alt="Pashie logo"
+                className="header-logo-img"
+                onError={e => {
+                  e.target.style.display = "none";
+                  const parent = e.target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = "<div class='header-logo-fallback'>P</div>";
+                  }
+                }}
+              />
+            </div>
+            <div className="header-texts">
+              <h1 className="header-title">
+                <span className="logo-name">Pashie</span>
+              </h1>
+              <p className="header-subtitle">
+                Je klantenkaarten altijd bij de hand – lokaal op je telefoon.
+              </p>
+            </div>
+          </div>
         </header>
 
         <main className="content">
@@ -535,7 +709,8 @@
       };
     }, []);
 
-        async function startScan() {
+    // Verbeterde scanner die EAN/CODE128 etc. herkent
+    async function startScan() {
       setError(null);
 
       if (typeof Html5Qrcode === "undefined") {
@@ -545,30 +720,52 @@
 
       try {
         const id = "scan-view";
+
         if (!html5Ref.current) {
-          html5Ref.current = new Html5Qrcode(id);
+          html5Ref.current = new Html5Qrcode(id, {
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+          });
         }
+
+        let config = {
+          fps: 10,
+          qrbox: { width: 260, height: 120 }
+        };
+
+        if (window.Html5QrcodeSupportedFormats) {
+          config.formatsToSupport = [
+            window.Html5QrcodeSupportedFormats.EAN_13,
+            window.Html5QrcodeSupportedFormats.EAN_8,
+            window.Html5QrcodeSupportedFormats.CODE_128,
+            window.Html5QrcodeSupportedFormats.CODE_39,
+            window.Html5QrcodeSupportedFormats.UPC_A,
+            window.Html5QrcodeSupportedFormats.UPC_E,
+            window.Html5QrcodeSupportedFormats.QR_CODE
+          ];
+        }
+
         setScanning(true);
 
         await html5Ref.current.start(
           { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 150 }
-          },
+          config,
           (decodedText, decodedResult) => {
             setBarcodeValue(decodedText || "");
+
             const format =
               decodedResult?.result?.format?.formatName ||
               decodedResult?.format?.formatName ||
               "UNKNOWN";
             setBarcodeFormat(format);
+
             html5Ref.current
               .stop()
               .then(() => setScanning(false))
               .catch(() => setScanning(false));
           },
-          () => {}
+          () => {
+            // tussenfouten negeren
+          }
         );
       } catch (err) {
         console.error(err);
@@ -635,7 +832,7 @@
           ></div>
           {!scanning && (
             <p className="helper small">
-              Als de camera niet werkt of je geen pop-up ziet, gebruik dan{" "}
+              Werkt de camera niet of zie je geen pop-up? Gebruik{" "}
               <strong>Handmatig invoeren</strong>.
             </p>
           )}
