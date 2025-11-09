@@ -34,6 +34,10 @@
 
     * { box-sizing: border-box; }
 
+    html, body {
+      height: 100%;
+    }
+
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -135,6 +139,9 @@
       background: #ffffff;
       padding-top: 4px;
       padding-bottom: calc(6px + env(safe-area-inset-bottom));
+      position: sticky;
+      bottom: 0;
+      z-index: 6;
     }
 
     .nav-button {
@@ -324,6 +331,10 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1;
+      text-align: center;
     }
 
     .card-title {
@@ -559,7 +570,6 @@
     useEffect(() => { saveStorage("pashie_cards", cards); }, [cards]);
     useEffect(() => { saveStorage("pashie_sort", sortBy); }, [sortBy]);
 
-    // Splash wat langer
     useEffect(() => {
       const t = setTimeout(() => setShowSplash(false), 2600);
       return () => clearTimeout(t);
@@ -771,7 +781,7 @@
 
     function startTimeout() {
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-      // na 8 seconden zonder scan -> naar handmatige invoer-pop-up
+      // na 2 seconden zonder scan -> naar handmatige invoer-pop-up
       scanTimeoutRef.current = setTimeout(async () => {
         if (!scanning || step !== "scan" || barcodeValue) return;
         try {
@@ -783,7 +793,7 @@
         setScanning(false);
         setBarcodeFormat("MANUAL_ENTRY");
         setStep("details");
-      }, 8000);
+      }, 2000);
     }
 
     async function startScan() {
@@ -998,7 +1008,6 @@
           </>
         )}
 
-        {/* Pop-up na scannen of na timeout / handmatig */}
         {step === "details" && (
           <div className="fullscreen-overlay">
             <div className="fullscreen-inner">
@@ -1284,23 +1293,18 @@
                   <div
                     key={card.id}
                     style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
                       padding: "6px 0",
                       borderBottom: "1px solid #e2e8f0",
                       fontSize: "13px"
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{card.storeName}</div>
-                    <div className="small" style={{ color: "#a0aec0" }}>
-                      {card.barcodeValue}
+                    <div style={{ fontWeight: 600 }}>
+                      {card.storeName}
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        marginTop: 4,
-                        flexWrap: "wrap"
-                      }}
-                    >
+                    <div style={{ display: "flex", gap: 6 }}>
                       <button
                         className="button-secondary"
                         style={{
@@ -1352,7 +1356,6 @@
           </p>
         </div>
 
-        {/* Overlay voor pasje bewerken */}
         {editingCard && (
           <div className="fullscreen-overlay">
             <div className="fullscreen-inner">
