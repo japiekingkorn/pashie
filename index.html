@@ -65,25 +65,26 @@
     }
 
     .header {
-      padding: 12px 16px;
+      padding: 14px 18px 14px 18px;
       border-bottom: 1px solid #e2e8f0;
       position: sticky;
       top: 0;
       z-index: 5;
       background: #ffffffcc;
       backdrop-filter: blur(10px);
+      padding-top: calc(14px + env(safe-area-inset-top));
     }
 
     .header-inner {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     .header-logo-box {
-      width: 36px;
-      height: 36px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
       background: #e6fffa;
       display: flex;
       align-items: center;
@@ -112,7 +113,7 @@
     }
 
     .header-title {
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 700;
       margin: 0;
     }
@@ -132,30 +133,36 @@
       display: flex;
       border-top: 1px solid #e2e8f0;
       background: #ffffff;
+      padding-top: 4px;
+      padding-bottom: calc(6px + env(safe-area-inset-bottom));
     }
 
     .nav-button {
       flex: 1;
-      padding: 8px 4px;
+      padding: 10px 4px;
       border: none;
       background: none;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 3px;
       cursor: pointer;
     }
 
-    .nav-button span { font-size: 11px; }
+    .nav-button span {
+      font-size: 12px;
+    }
 
     .nav-button.nav-active {
       color: var(--primary);
       font-weight: 600;
     }
 
-    .nav-icon { font-size: 18px; }
+    .nav-icon {
+      font-size: 20px;
+    }
 
     .section-title {
       font-size: 16px;
@@ -257,7 +264,7 @@
 
     .scan-guides-box {
       width: 80%;
-      height: 40%;
+      height: 45%;
       border-radius: 12px;
       border: 2px solid rgba(255, 255, 255, 0.95);
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
@@ -508,6 +515,13 @@
       font-size: 11px;
       opacity: 0.8;
     }
+
+    /* Verberg de standaard "T-hoeken" van html5-qrcode */
+    #scan-view .scan-region-highlight,
+    #scan-view .scan-region-highlight-svg,
+    #scan-view .code-outline {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -545,8 +559,9 @@
     useEffect(() => { saveStorage("pashie_cards", cards); }, [cards]);
     useEffect(() => { saveStorage("pashie_sort", sortBy); }, [sortBy]);
 
+    // Splash 2x zo lang
     useEffect(() => {
-      const t = setTimeout(() => setShowSplash(false), 1300);
+      const t = setTimeout(() => setShowSplash(false), 2600);
       return () => clearTimeout(t);
     }, []);
 
@@ -763,9 +778,10 @@
 
         let config = {
           fps: 10,
-          qrbox: { width: 300, height: 130 }
+          qrbox: { width: 320, height: 160 }
         };
 
+        // Extra hint naar alle bekende formaten als de helper beschikbaar is
         if (window.Html5QrcodeSupportedFormats) {
           config.formatsToSupport = [
             window.Html5QrcodeSupportedFormats.EAN_13,
@@ -883,7 +899,6 @@
                 <div
                   id="scan-view"
                   className="scan-view"
-                  style={{ display: scanning ? "block" : "block" }}
                 ></div>
                 {scanning && (
                   <div className="scan-guides">
@@ -896,7 +911,8 @@
               </div>
               {!scanning && (
                 <p className="helper small">
-                  Geen scan? Let op licht, houd de barcode stil en probeer evt. het fysieke pasje i.p.v. een scherm.
+                  Geen scan? Let op licht, houd de barcode stil en probeer evt. het fysieke pasje.
+                  Op sommige telefoons werken vooral QR-codes goed. Je kunt altijd het nummer intypen.
                 </p>
               )}
 
@@ -1283,6 +1299,11 @@
             <li>Fysieke pasjes werken vaak beter dan een foto of screenshot.</li>
             <li>Lukt scannen niet? Typ het nummer onder de streepjescode in.</li>
           </ul>
+          <p className="small" style={{ marginTop: 8 }}>
+            Op sommige telefoons (vooral iPhone) kunnen alleen QR-codes betrouwbaar worden gelezen.
+            Voor gewone streepjescodes kun je daarom het nummer overnemen; Pashie maakt er dan
+            een scanbare barcode van.
+          </p>
         </div>
 
         <div className="settings-box">
