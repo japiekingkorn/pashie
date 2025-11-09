@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Pashie">
@@ -14,204 +14,1071 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     
     <!-- React & Babel -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html5-qrcode for barcode scanning -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
-    <!-- Barcode Libraries -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- JsBarcode for barcode generation -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    
+
+    <!-- Styles -->
     <style>
-        html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
+        :root {
+            --turquoise: #1A7B7B;
+            --coral: #FF6B6B;
+            --teal: #0F4C5C;
+            --dark: #1A202C;
+            --light: #F7FAFC;
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            height: 100dvh;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #e0f7f7 0%, #fef6f6 100%);
+            min-height: 100vh;
+            color: #1A202C;
+            -webkit-font-smoothing: antialiased;
         }
+
         #root {
-            height: 100vh;
-            height: 100dvh;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
+            background: linear-gradient(135deg, #e0f7f7 0%, #fef6f6 100%);
         }
-        * {
-            -webkit-tap-highlight-color: transparent;
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
-        
-        /* Safe area support for notches and browser bars */
-        .app-header {
-            padding-top: max(env(safe-area-inset-top), 20px);
-            padding-bottom: 16px;
-            padding-left: max(env(safe-area-inset-left), 16px);
-            padding-right: max(env(safe-area-inset-right), 16px);
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: env(safe-area-inset-bottom);
         }
-        
+
         .bottom-nav {
-            padding-top: 12px;
-            padding-bottom: max(env(safe-area-inset-bottom), 20px);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
-        }
-        
-        /* Splash Screen */
-        #splash-screen {
-            position: fixed;
-            top: 0;
+            position: sticky;
+            bottom: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            background: #1A7B7B;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(226, 232, 240, 0.9);
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+            z-index: 20;
+        }
+
+        .bottom-nav-inner {
+            display: flex;
+            gap: 8px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .nav-button {
+            flex: 1;
+            border: none;
+            border-radius: 999px;
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 11px;
+            background: transparent;
+            color: #A0AEC0;
+            cursor: pointer;
+            transition: all 0.18s ease-out;
+        }
+
+        .nav-button.active {
+            color: var(--turquoise);
+            background: rgba(26,123,123,0.08);
+        }
+
+        .nav-icon {
+            width: 22px;
+            height: 22px;
+            margin-bottom: 2px;
+        }
+
+        .nav-label {
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            padding: 16px;
+        }
+
+        .card-button {
+            position: relative;
+            border: none;
+            border-radius: 16px;
+            padding: 12px;
+            background: linear-gradient(145deg, #ffffff, #f7fafc);
+            box-shadow: 0 10px 25px rgba(15, 76, 92, 0.12);
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+        }
+
+        .card-button:active {
+            transform: translateY(1px) scale(0.99);
+            box-shadow: 0 6px 18px rgba(15, 76, 92, 0.16);
+        }
+
+        .card-logo {
+            border-radius: 12px;
+            height: 72px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            animation: fadeOut 0.5s ease-in-out 1.5s forwards;
-            margin: 0;
-            padding: 0;
+            background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), rgba(15, 76, 92, 0.1));
+            overflow: hidden;
         }
-        
-        #splash-logo {
-            width: 280px;
-            height: 280px;
+
+        .card-logo img, .card-logo canvas {
+            max-width: 70%;
+            max-height: 70%;
             object-fit: contain;
-            animation: fadeIn 0.5s ease-in-out;
         }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+
+        .card-info {
+            margin-top: 8px;
         }
-        
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
+
+        .card-store-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #1A202C;
+            margin-bottom: 2px;
+        }
+
+        .card-meta {
+            font-size: 11px;
+            color: #718096;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .badge-primary {
+            background: rgba(26,123,123,0.08);
+            color: var(--turquoise);
+        }
+
+        .badge-secondary {
+            background: rgba(113,128,150,0.1);
+            color: #4A5568;
+        }
+
+        .section-header {
+            padding: 16px 16px 8px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2D3748;
+        }
+
+        .section-subtitle {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 2px;
+        }
+
+        .pill-button {
+            border-radius: 999px;
+            border: none;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pill-primary {
+            background: var(--coral);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(255, 107, 107, 0.4);
+        }
+
+        .pill-outline {
+            background: transparent;
+            color: var(--turquoise);
+            border: 1px solid rgba(26,123,123,0.5);
+        }
+
+        .pill-primary:active,
+        .pill-outline:active {
+            transform: translateY(1px);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        .scan-frame {
+            border-radius: 24px;
+            border: 2px dashed rgba(26,123,123,0.5);
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 14px 30px rgba(15, 76, 92, 0.18);
+        }
+
+        .scan-preview {
+            border-radius: 18px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .field-label {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .text-input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+            padding: 10px 12px;
+            font-size: 14px;
+            background: white;
+            outline: none;
+            transition: all 0.15s ease-out;
+        }
+
+        .text-input:focus {
+            border-color: var(--turquoise);
+            box-shadow: 0 0 0 1px rgba(26,123,123,0.4);
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: #A0AEC0;
+            margin-top: 4px;
+        }
+
+        .barcode-preview {
+            border-radius: 18px;
+            background: white;
+            padding: 16px;
+            box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.8);
+        }
+
+        .barcode-fullscreen {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: radial-gradient(circle at top, #fef3f3 0, #e0f7f7 45%, #0f4c5c 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #1A202C;
+        }
+
+        .barcode-fullscreen .close-btn {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+        }
+
+        .barcode-fullscreen .info-badge {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+        }
+
+        .barcode-value {
+            font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 16px;
+            letter-spacing: 0.22em;
+            margin-top: 10px;
+            color: #F7FAFC;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        .settings-section {
+            background: white;
+            border-radius: 18px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 20px rgba(15, 76, 92, 0.1);
+        }
+
+        .settings-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .settings-description {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 10px;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #2D3748;
+        }
+
+        .toggle {
+            width: 42px;
+            height: 24px;
+            border-radius: 999px;
+            background: #CBD5E0;
+            padding: 3px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.18s ease-out;
+        }
+
+        .toggle-knob {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            background: white;
+            box-shadow: 0 2px 6px rgba(113, 128, 150, 0.6);
+            transform: translateX(0);
+            transition: transform 0.18s ease-out;
+        }
+
+        .toggle.on {
+            background: var(--turquoise);
+        }
+
+        .toggle.on .toggle-knob {
+            transform: translateX(16px);
+        }
+
+        .barcode-placeholder {
+            text-align: center;
+            padding: 12px 8px;
+            border-radius: 12px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(45, 55, 72, 0.1) 0,
+                rgba(45, 55, 72, 0.1) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            color: #4A5568;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .splash-logo {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: 0.35em;
+            text-indent: 0.35em;
+            text-transform: uppercase;
+            color: white;
+            text-shadow: 0 18px 40px rgba(0,0,0,0.35);
+        }
+
+        .splash-subtitle {
+            margin-top: 10px;
+            font-size: 13px;
+            color: rgba(247, 250, 252, 0.9);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .splash-pill {
+            margin-top: 18px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(15, 76, 92, 0.65);
+            color: #EDF2F7;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .help-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .help-list li {
+            display: flex;
+            gap: 8px;
+            font-size: 13px;
+            color: #4A5568;
+            margin-bottom: 4px;
+        }
+
+        .help-list li::before {
+            content: "•";
+            color: var(--turquoise);
+            margin-top: 1px;
+        }
+
+        .logo-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .logo-option {
+            border-radius: 12px;
+            border: 1px solid transparent;
+            padding: 6px;
+            background: #F7FAFC;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease-out;
+        }
+
+        .logo-option.selected {
+            border-color: var(--turquoise);
+            box-shadow: 0 0 0 1px rgba(26,123,123,0.25);
+            background: #EBF8FF;
+        }
+
+        .logo-option img {
+            max-width: 80%;
+            max-height: 80%;
+            object-fit: contain;
+        }
+
+        .logo-fallback {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #FF6B6B, #F6E05E, #48BB78);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 18px;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .settings-card-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(15, 76, 92, 0.06);
+            color: #2D3748;
+            font-size: 11px;
+        }
+
+        .settings-card-pill span {
+            font-weight: 600;
+        }
+
+        .danger-button {
+            background: #fff5f5;
+            color: #C53030;
+            border-radius: 12px;
+            border: 1px solid #FED7D7;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .danger-button:active {
+            background: #FED7D7;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(26,123,123,0.06);
+            color: var(--turquoise);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .file-input-label input[type="file"] {
+            display: none;
+        }
+
+        .tab-badge {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.22);
+            border-radius: 999px;
+            padding: 2px 8px;
+            color: #EDF2F7;
+        }
+
+        .help-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: rgba(15,76,92,0.08);
+            color: #2D3748;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .barcode-svg {
+            width: 100%;
+            height: 140px;
+        }
+
+        .scroll-area {
+            padding-bottom: 32px;
+        }
+
+        @media (min-width: 540px) {
+            body {
+                background: #CBD5E0;
             }
-            to {
-                opacity: 0;
-                visibility: hidden;
+
+            #root {
+                margin: 16px auto;
+                border-radius: 24px;
+                box-shadow:
+                    0 30px 80px rgba(15, 76, 92, 0.35),
+                    0 0 0 1px rgba(255, 255, 255, 0.5);
+                overflow: hidden;
+            }
+
+            .bottom-nav {
+                border-radius: 16px 16px 0 0;
             }
         }
 
-        /* Scanner Styles */
-        #qr-reader {
-            width: 100%;
-        }
-        #qr-reader__dashboard_section_swaplink {
-            display: none !important;
-        }
-        
-        /* Card Grid */
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 16px;
-            padding: 16px;
-        }
-        
-        .card-button {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: all 0.2s;
-            cursor: pointer;
-            border: 2px solid transparent;
-            padding: 12px;
-            font-family: inherit;
-            min-height: 150px;
-            min-width: 150px;
-            touch-action: manipulation;
-        }
-        
-        .card-button:active {
-            transform: scale(0.95);
-            border-color: #4ECDC4;
-        }
-        
-        .card-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-color: #4ECDC4;
-        }
-        
-        .card-logo {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
+        /* Utility classes */
+        .mt-1 { margin-top: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mt-4 { margin-top: 16px; }
+        .mt-5 { margin-top: 20px; }
+        .mt-6 { margin-top: 24px; }
+
+        .mb-1 { margin-bottom: 4px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mb-5 { margin-bottom: 20px; }
+
+        .pt-1 { padding-top: 4px; }
+        .pt-2 { padding-top: 8px; }
+        .pt-3 { padding-top: 12px; }
+        .pt-4 { padding-top: 16px; }
+
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .fw-bold { font-weight: 700; }
+
+        .scanner-error {
+            margin-top: 8px;
+            padding: 8px 10px;
             border-radius: 12px;
+            background: #FFF5F5;
+            color: #C53030;
+            font-size: 12px;
         }
-        
-        /* Barcode Display */
-        .barcode-fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: white;
-            z-index: 1000;
+
+        .badge-usage {
+            font-size: 11px;
+            color: #718096;
+        }
+
+        .usage-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--coral);
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .empty-state-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 24px;
+            background: radial-gradient(circle at 30% 20%, #FF6B6B, #F6E05E 40%, #48BB78 80%);
+            margin: 0 auto 12px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #F7FAFC;
+            font-size: 34px;
+            box-shadow: 0 16px 38px rgba(15, 76, 92, 0.45);
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2D3748;
+        }
+
+        .empty-state-text {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .empty-state-action {
+            margin-top: 18px;
+        }
+
+        .scan-caption {
+            font-size: 11px;
+            color: #A0AEC0;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .scan-indicator {
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,107,107,0.9), transparent);
+            animation: scanLine 1.6s infinite;
+        }
+
+        @keyframes scanLine {
+            0% { transform: translateX(-100%); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+
+        .splash-container {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: radial-gradient(circle at top, #FF6B6B 0, #1A7B7B 45%, #0B2545 100%);
+            display: flex;
             align-items: center;
             justify-content: center;
         }
-        
-        /* Tailwind Custom Colors */
-        .bg-coral { background-color: #FF6B5A; }
-        .bg-gold { background-color: #FFB84D; }
-        .bg-turquoise { background-color: #4ECDC4; }
-        .bg-teal { background-color: #1A7B7B; }
-        .text-coral { color: #FF6B5A; }
-        .text-turquoise { color: #4ECDC4; }
-        .border-turquoise { border-color: #4ECDC4; }
+
+        .splash-inner {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .splash-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 999px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.4), rgba(11, 37, 69, 0.2));
+            box-shadow: 0 22px 50px rgba(0,0,0,0.5);
+        }
+
+        .splash-circle-inner {
+            width: 84px;
+            height: 84px;
+            border-radius: 999px;
+            background: conic-gradient(from 180deg, #FF6B6B, #F6E05E, #48BB78, #38B2AC, #4299E1, #FF6B6B);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .splash-card {
+            width: 54px;
+            height: 34px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.45);
+            transform: rotate(-8deg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 6px 8px;
+        }
+
+        .splash-card-line {
+            height: 3px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #1A7B7B, #FF6B6B);
+            margin-bottom: 4px;
+        }
+
+        .splash-card-chip {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            border: 1px solid rgba(26,123,123,0.4);
+            margin-left: auto;
+        }
+
+        .splash-ornament {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            border: 2px solid rgba(255,255,255,0.7);
+        }
+
+        .splash-ornament.one {
+            top: 8px;
+            left: 10px;
+        }
+
+        .splash-ornament.two {
+            bottom: 10px;
+            right: 16px;
+            width: 22px;
+            height: 22px;
+        }
+
+        .barcode-fullscreen-inner {
+            max-width: 430px;
+            margin: 0 auto;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .barcode-card {
+            border-radius: 24px;
+            padding: 22px 18px 20px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow:
+                0 24px 50px rgba(0, 0, 0, 0.65),
+                0 0 0 1px rgba(15, 76, 92, 0.5);
+        }
+
+        .barcode-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1A202C;
+            margin-bottom: 12px;
+        }
+
+        .barcode-format-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(15,76,92,0.08);
+            color: #2D3748;
+            font-size: 11px;
+        }
+
+        .barcode-help-text {
+            margin-top: 14px;
+            font-size: 11px;
+            color: #E2E8F0;
+        }
+
+        .top-safe-area {
+            padding-top: max(18px, env(safe-area-inset-top));
+        }
+
+        .debug-banner {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: calc(72px + env(safe-area-inset-bottom));
+            z-index: 35;
+            font-size: 11px;
+        }
+
+        .debug-banner-inner {
+            background: #FEEBC8;
+            color: #7B341E;
+            border-radius: 10px;
+            padding: 8px 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        }
+
+        .debug-banner strong {
+            font-weight: 700;
+        }
+
+        .pill-small {
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 10px;
+            background: rgba(15, 76, 92, 0.1);
+            color: #1A202C;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .pill-small-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--turquoise);
+        }
+
+        .info-banner {
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(237, 242, 247, 0.9);
+            font-size: 11px;
+            color: #4A5568;
+            margin-bottom: 8px;
+        }
+
+        .info-banner strong {
+            font-weight: 600;
+        }
+
+        .logo-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+        }
+
+        .logo-picker-title {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .logo-picker-subtitle {
+            font-size: 11px;
+            color: #A0AEC0;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: rgba(226, 232, 240, 0.8);
+            margin: 12px 0;
+        }
+
+        .settings-note {
+            font-size: 11px;
+            color: #A0AEC0;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(160, 174, 192, 0.7);
+            border-radius: 999px;
+        }
+
+        /* Mobile safe tap areas */
+        .bottom-nav-inner button {
+            min-height: 44px;
+        }
+
+        /* Simple fade animation for splash */
+        .fade-out {
+            animation: fadeOut 0.45s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+
+        .scan-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+
+        .scan-label-row span {
+            font-size: 11px;
+            color: #A0AEC0;
+        }
+
+        .manual-toggle {
+            font-size: 12px;
+            color: #2B6CB0;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .manual-toggle:hover {
+            color: #2C5282;
+        }
+
+        .badge-pill {
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(26,123,123,0.08);
+            color: #2C7A7B;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .small-key-hint {
+            font-size: 10px;
+            color: #A0AEC0;
+        }
+
+        .cards-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .cards-header-text {
+            flex: 1;
+        }
+
+        .cards-search-hint {
+            font-size: 11px;
+            color: #A0AEC0;
+            margin-top: 2px;
+        }
+
+        .cards-count-pill {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(26,123,123,0.08);
+            color: #2C7A7B;
+            font-weight: 600;
+        }
+
+        .cards-tagline {
+            font-size: 11px;
+            color: #A0AEC0;
+            margin-top: 4px;
+        }
+
+        .cards-section {
+            padding: 0 16px 12px;
+        }
+
+        .cards-section-label {
+            font-size: 11px;
+            color: #A0AEC0;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 6px;
+        }
+
+        .cards-section-inner {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .cards-chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(237, 242, 247, 0.9);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .cards-chip strong {
+            font-weight: 600;
+        }
+
+        @media (max-width: 320px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
     </style>
 </head>
 <body>
-    <!-- Splash Screen -->
-    <div id="splash-screen">
-        <img id="splash-logo" src="icons/icon-512.png" alt="Pashie Logo">
-    </div>
-
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Utility Functions
-        const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
-        
-        const saveToStorage = (key, data) => {
-            localStorage.setItem(key, JSON.stringify(data));
+        // Helper functions for localStorage
+        const loadFromStorage = (key, defaultValue) => {
+            try {
+                const stored = localStorage.getItem(key);
+                return stored ? JSON.parse(stored) : defaultValue;
+            } catch (e) {
+                console.error('Error reading from localStorage:', e);
+                return defaultValue;
+            }
         };
-        
-        const loadFromStorage = (key, defaultValue = null) => {
-            const stored = localStorage.getItem(key);
-            return stored ? JSON.parse(stored) : defaultValue;
+
+        const saveToStorage = (key, value) => {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) {
+                console.error('Error writing to localStorage:', e);
+            }
         };
 
         // Main App Component
@@ -222,6 +1089,16 @@
                 sortBy: 'alphabetical',
                 darkMode: false
             }));
+            const [showSplash, setShowSplash] = useState(true);
+            const [debugInfo, setDebugInfo] = useState('');
+
+            // Splash screen timer
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    setShowSplash(false);
+                }, 1400);
+                return () => clearTimeout(timer);
+            }, []);
 
             // Save cards to localStorage whenever they change
             useEffect(() => {
@@ -233,61 +1110,102 @@
                 saveToStorage('pashie_settings', settings);
             }, [settings]);
 
-            const addCard = (cardData) => {
-                const newCard = {
-                    id: generateId(),
-                    ...cardData,
-                    dateAdded: new Date().toISOString(),
-                    lastUsed: null,
-                    usageCount: 0
-                };
-                setCards([...cards, newCard]);
+            // Add a sample card if none exist
+            useEffect(() => {
+                if (cards.length === 0) {
+                    const sampleCard = {
+                        id: 'sample',
+                        storeName: 'Voorbeeld Winkel',
+                        barcodeValue: '1234567890123',
+                        barcodeFormat: 'EAN_13',
+                        logoType: 'preset',
+                        logoData: 'sample-store',
+                        dateAdded: new Date().toISOString(),
+                        lastUsed: null,
+                        usageCount: 0,
+                        isSample: true
+                    };
+                    setCards([sampleCard]);
+                }
+            }, []);
+
+            const addCard = (card) => {
+                setCards(prev => {
+                    const withoutSample = prev.filter(c => !c.isSample);
+                    return [...withoutSample, card];
+                });
             };
 
             const updateCard = (id, updates) => {
-                setCards(cards.map(card => 
-                    card.id === id ? { ...card, ...updates } : card
-                ));
+                setCards(prev =>
+                    prev.map(card =>
+                        card.id === id ? { ...card, ...updates } : card
+                    )
+                );
             };
 
             const deleteCard = (id) => {
-                setCards(cards.filter(card => card.id !== id));
+                setCards(prev => prev.filter(card => card.id !== id));
             };
 
             const useCard = (id) => {
-                setCards(cards.map(card => 
-                    card.id === id ? {
-                        ...card,
-                        lastUsed: new Date().toISOString(),
-                        usageCount: (card.usageCount || 0) + 1
-                    } : card
-                ));
+                setCards(prev =>
+                    prev.map(card =>
+                        card.id === id
+                            ? {
+                                ...card,
+                                lastUsed: new Date().toISOString(),
+                                usageCount: (card.usageCount || 0) + 1
+                            }
+                            : card
+                    )
+                );
             };
 
             // Icons
             const ScanIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="4" y="4" width="16" height="16" rx="3" ry="3" strokeWidth="2" />
+                    <path d="M4 9h16M4 15h16" strokeWidth="2" />
+                    <rect x="9" y="9" width="2" height="6" />
+                    <rect x="13" y="9" width="2" height="6" />
                 </svg>
             );
 
             const CardsIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="7" width="18" height="12" rx="2" ry="2" strokeWidth="2" />
+                    <path d="M3 11h18" strokeWidth="2" />
+                    <path d="M8 15h2m4 0h2" strokeWidth="2" />
                 </svg>
             );
 
             const SettingsIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.89 3.31.876 2.42 2.42a1.724 1.724 0 001.066 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.89 1.543-.877 3.31-2.42 2.42a1.724 1.724 0 00-2.572 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.89-3.31-.877-2.42-2.42a1.724 1.724 0 00-1.066-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.89-1.543.877-3.31 2.42-2.42a1.724 1.724 0 002.573-1.066z"
+                    />
+                    <path
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
                 </svg>
             );
 
             const HelpIcon = () => (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg className="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8.228 9c.549-1.165 1.756-2 3.272-2 1.933 0 3.5 1.507 3.5 3.364 0 1.31-.693 2.143-1.664 2.735-.862.53-1.336 1.01-1.336 1.901V16m0 2h.01"
+                    />
+                    <circle cx="12" cy="12" r="9" strokeWidth="2" />
                 </svg>
             );
 
@@ -301,307 +1219,327 @@
                 const [manualEntry, setManualEntry] = useState(false);
                 const [manualBarcode, setManualBarcode] = useState('');
                 const scannerRef = useRef(null);
+                const html5QrcodeRef = useRef(null);
+
+                const presets = [
+                    'ah', 'jumbo', 'hema', 'etos',
+                    'gall-gall', 'praxis', 'gamma', 'diy',
+                    'sports', 'fashion', 'tech', 'other'
+                ];
+
+                useEffect(() => {
+                    return () => {
+                        if (html5QrcodeRef.current) {
+                            try {
+                                html5QrcodeRef.current.stop().catch(() => {});
+                                html5QrcodeRef.current.clear().catch(() => {});
+                            } catch (e) {
+                                console.warn('Error cleaning up scanner:', e);
+                            }
+                        }
+                    };
+                }, []);
 
                 const startScanning = async () => {
                     setError(null);
-                    
-                    try {
-                        // Check if html5-qrcode is loaded
-                        if (typeof Html5Qrcode === 'undefined') {
-                            throw new Error('Barcode scanner library niet geladen. Herlaad de pagina.');
-                        }
 
-                        // IMPORTANT: First request camera permission explicitly
-                        // This shows the browser permission dialog
-                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                            setError('âŒ Camera wordt niet ondersteund door deze browser.');
+                    try {
+                        if (typeof Html5Qrcode === 'undefined') {
+                            setError('Barcode scanner library niet geladen. Controleer je internetverbinding.');
                             return;
                         }
 
-                        console.log("Requesting camera permission...");
-                        const stream = await navigator.mediaDevices.getUserMedia({ 
-                            video: { facingMode: "environment" } 
-                        });
-                        
-                        // Stop the stream immediately - we just needed permission
-                        stream.getTracks().forEach(track => track.stop());
-                        console.log("Camera permission granted!");
+                        const constraints = {
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        };
 
-                        // Now start the actual scanner
+                        const html5QrCode = new Html5Qrcode('scanner', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+                        html5QrcodeRef.current = html5QrCode;
+
+                        const config = {
+                            fps: 10,
+                            qrbox: { width: 250, height: 150 },
+                            aspectRatio: 1.77,
+                            formatsToSupport: [
+                                Html5QrcodeSupportedFormats.EAN_13,
+                                Html5QrcodeSupportedFormats.EAN_8,
+                                Html5QrcodeSupportedFormats.QR_CODE,
+                                Html5QrcodeSupportedFormats.CODE_128,
+                                Html5QrcodeSupportedFormats.CODE_39,
+                                Html5QrcodeSupportedFormats.UPC_A,
+                                Html5QrcodeSupportedFormats.UPC_E
+                            ]
+                        };
+
                         setScanning(true);
-                        const html5QrCode = new Html5Qrcode("qr-reader");
-                        scannerRef.current = html5QrCode;
 
-                        await html5QrCode.start(
-                            { facingMode: "environment" },
-                            {
-                                fps: 10,
-                                qrbox: { width: 250, height: 250 },
-                                aspectRatio: 1.0
-                            },
+                        html5QrCode.start(
+                            constraints,
+                            config,
                             (decodedText, decodedResult) => {
-                                console.log("Barcode gescand:", decodedText);
+                                let format = decodedResult.result?.format?.formatName || decodedResult.format?.formatName || 'UNKNOWN';
+
                                 setScannedData({
-                                    value: decodedText,
-                                    format: decodedResult.result.format?.formatName || 'UNKNOWN'
+                                    text: decodedText,
+                                    format
                                 });
-                                html5QrCode.stop().then(() => {
-                                    setScanning(false);
-                                }).catch(err => console.error("Stop error:", err));
+
+                                setManualBarcode(decodedText);
+
+                                html5QrCode.stop().catch(() => {});
+                                setScanning(false);
                             },
                             (errorMessage) => {
-                                // Scan errors (happens continuously while scanning)
-                                // Don't show these to user
+                                console.log('Scan in progress:', errorMessage);
                             }
-                        );
-                    } catch (err) {
-                        console.error("Scanner error:", err);
-                        setScanning(false);
-                        
-                        if (err.name === 'NotAllowedError' || err.message.includes('Permission')) {
-                            setError('âŒ Camera toegang geweigerd. Klik nogmaals op "Start Scannen" en geef toestemming.');
-                        } else if (err.name === 'NotFoundError') {
-                            setError('âŒ Geen camera gevonden op dit apparaat.');
-                        } else if (err.name === 'NotReadableError') {
-                            setError('âŒ Camera is al in gebruik door een andere app.');
-                        } else {
-                            setError('âŒ Fout bij starten camera: ' + err.message);
-                        }
-                    }
-                };
-
-                const stopScanning = () => {
-                    if (scannerRef.current) {
-                        scannerRef.current.stop().then(() => {
-                            setScanning(false);
-                            setError(null);
-                        }).catch(err => {
-                            console.error("Stop error:", err);
+                        ).catch(err => {
+                            console.error('Error starting scan:', err);
+                            setError('Kon de camera niet starten. Controleer camera-toegang in je browserinstellingen.');
                             setScanning(false);
                         });
+                    } catch (err) {
+                        console.error('Scan error:', err);
+                        setError('Er ging iets mis bij het starten van de scanner.');
+                        setScanning(false);
                     }
                 };
 
-                const saveCard = () => {
+                const stopScanning = async () => {
+                    if (html5QrcodeRef.current) {
+                        try {
+                            await html5QrcodeRef.current.stop();
+                            await html5QrcodeRef.current.clear();
+                        } catch (e) {
+                            console.warn('Error stopping scanner:', e);
+                        }
+                    }
+                    setScanning(false);
+                };
+
+                const handleSaveCard = () => {
+                    setError(null);
+
+                    const barcodeValue = manualEntry
+                        ? manualBarcode.trim()
+                        : (scannedData?.text || '').trim();
+
+                    if (!barcodeValue) {
+                        setError('Geen barcode gevonden. Scan een kaart of voer handmatig een code in.');
+                        return;
+                    }
+
                     if (!storeName.trim()) {
-                        alert("Vul een winkelnaam in!");
-                        return;
-                    }
-                    if (!scannedData) {
-                        alert("Scan eerst een barcode!");
+                        setError('Voer een winkelnaam in.');
                         return;
                     }
 
-                    addCard({
+                    const card = {
+                        id: Date.now().toString(),
                         storeName: storeName.trim(),
-                        barcodeValue: scannedData.value,
-                        barcodeFormat: scannedData.format,
-                        logoType: selectedLogo ? 'preset' : 'default',
-                        logoData: selectedLogo || storeName.charAt(0).toUpperCase()
-                    });
+                        barcodeValue,
+                        barcodeFormat: scannedData?.format || 'MANUAL_ENTRY',
+                        logoType: selectedLogo ? 'preset' : 'initials',
+                        logoData: selectedLogo || storeName.trim().charAt(0).toUpperCase(),
+                        dateAdded: new Date().toISOString(),
+                        lastUsed: null,
+                        usageCount: 0
+                    };
 
-                    // Reset form
-                    setScannedData(null);
+                    addCard(card);
                     setStoreName('');
+                    setScannedData(null);
+                    setManualBarcode('');
                     setSelectedLogo(null);
                     setManualEntry(false);
-                    setManualBarcode('');
+
                     setActiveTab('cards');
+                    setDebugInfo(`Nieuw pasje opgeslagen: ${card.storeName} (${card.barcodeFormat})`);
                 };
 
-                const submitManualBarcode = () => {
-                    if (!manualBarcode.trim()) {
-                        alert("Vul een barcode nummer in!");
-                        return;
+                const toggleManualEntry = () => {
+                    setManualEntry(prev => !prev);
+                    setError(null);
+                    if (!manualEntry && scannedData) {
+                        setManualBarcode(scannedData.text);
                     }
-                    setScannedData({
-                        value: manualBarcode.trim(),
-                        format: 'MANUAL_ENTRY'
-                    });
-                    setManualEntry(false);
                 };
-
-                const presetLogos = [
-                    'Albert Heijn', 'Jumbo', 'Lidl', 'Aldi', 'Plus',
-                    'Etos', 'Kruidvat', 'Action', 'HEMA', 'MediaMarkt'
-                ];
 
                 return (
-                    <div className="flex flex-col h-full bg-gray-50">
-                        <div className="bg-teal text-white app-header shadow-md">
-                            <h1 className="text-xl font-bold">Scan Pasje</h1>
+                    <div className="content scroll-area">
+                        <div className="section-header">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                <div>
+                                    <div className="section-title">Nieuw pasje scannen</div>
+                                    <div className="section-subtitle">Scan of voer de barcode in, geef de winkelnaam op en kies een logo.</div>
+                                </div>
+                                <div className="pill-small">
+                                    <span className="pill-small-dot"></span>
+                                    <span>Camera of handmatig</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-4">
-                            {error && (
-                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
-                                    <p className="text-sm">{error}</p>
-                                    <button 
-                                        onClick={() => setError(null)}
-                                        className="text-xs underline mt-2"
-                                    >
-                                        Probeer opnieuw
-                                    </button>
+                        <div style={{ padding: '0 16px 16px' }}>
+                            <div className="scan-frame">
+                                <div className="scan-label-row">
+                                    <div className="field-label">Barcode scannen</div>
+                                    <span>{scanning ? 'Bezig met scannen…' : 'Camera gebruiken'}</span>
                                 </div>
-                            )}
+                                <div id="scanner" ref={scannerRef} className="scan-preview" style={{ height: scanning ? 220 : 0, transition: 'height 0.25s ease-out', overflow: 'hidden' }}></div>
+                                {scanning && <div className="scan-indicator"></div>}
+                                <div className="scan-caption">
+                                    Richt de camera op de streepjescode of QR-code van je membership card.
+                                </div>
 
-                            {!scanning && !scannedData && !error && !manualEntry && (
-                                <div className="text-center py-12">
-                                    <div className="mb-6">
-                                        <svg className="w-24 h-24 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                        </svg>
-                                    </div>
+                                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                    {!scanning ? (
+                                        <button
+                                            className="pill-button pill-primary"
+                                            style={{ flex: 1, justifyContent: 'center' }}
+                                            onClick={startScanning}
+                                        >
+                                            📷 Start scannen
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="pill-button pill-outline"
+                                            style={{ flex: 1, justifyContent: 'center' }}
+                                            onClick={stopScanning}
+                                        >
+                                            ✋ Stop scannen
+                                        </button>
+                                    )}
                                     <button
-                                        onClick={startScanning}
-                                        className="bg-coral text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-opacity-90 transition"
+                                        className="pill-button pill-outline"
+                                        style={{ flex: 1, justifyContent: 'center' }}
+                                        onClick={toggleManualEntry}
                                     >
-                                        ðŸ“· Start Scannen
-                                    </button>
-                                    <p className="text-gray-600 mt-4 text-sm">
-                                        Scan de barcode van je membership card
-                                    </p>
-                                    
-                                    <div className="mt-6">
-                                        <button
-                                            onClick={() => setManualEntry(true)}
-                                            className="text-turquoise font-bold text-sm underline"
-                                        >
-                                            âœï¸ Of voer barcode handmatig in
-                                        </button>
-                                    </div>
-
-                                    <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                                        <p className="text-sm font-bold text-blue-900 mb-2">ðŸ’¡ Tips:</p>
-                                        <ul className="text-xs text-blue-800 space-y-1">
-                                            <li>â€¢ Geef camera toegang wanneer gevraagd</li>
-                                            <li>â€¢ Zorg voor goede belichting</li>
-                                            <li>â€¢ Houd de barcode stil en recht</li>
-                                            <li>â€¢ Werkt met EAN, QR codes en meer</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            )}
-
-                            {manualEntry && (
-                                <div className="bg-white p-6 rounded-lg shadow">
-                                    <h3 className="font-bold text-lg mb-4">Handmatige Invoer</h3>
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        Vul het nummer van de barcode handmatig in. Je vindt dit meestal onder de barcode op je pasje.
-                                    </p>
-                                    <input
-                                        type="text"
-                                        value={manualBarcode}
-                                        onChange={(e) => setManualBarcode(e.target.value)}
-                                        placeholder="Bijv. 1234567890123"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 font-mono"
-                                        autoFocus
-                                    />
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setManualEntry(false);
-                                                setManualBarcode('');
-                                            }}
-                                            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-bold"
-                                        >
-                                            Annuleren
-                                        </button>
-                                        <button
-                                            onClick={submitManualBarcode}
-                                            className="flex-1 bg-turquoise text-white py-3 rounded-lg font-bold"
-                                        >
-                                            Doorgaan
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {scanning && (
-                                <div>
-                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                                        <p className="text-sm text-yellow-800">
-                                            ðŸ“¸ Camera wordt gestart... Geef toestemming als gevraagd.
-                                        </p>
-                                    </div>
-                                    <div id="qr-reader" className="mb-4"></div>
-                                    <button
-                                        onClick={stopScanning}
-                                        className="w-full bg-red-500 text-white py-3 rounded-lg font-bold"
-                                    >
-                                        Stop Scannen
+                                        {manualEntry ? '⬅️ Terug naar scanner' : '⌨️ Handmatig invoeren'}
                                     </button>
                                 </div>
-                            )}
 
-                            {scannedData && (
-                                <div className="space-y-4">
-                                    <div className="bg-white p-4 rounded-lg shadow">
-                                        <p className="text-sm text-gray-600 mb-1">Gescande barcode:</p>
-                                        <p className="font-mono font-bold text-lg">{scannedData.value}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Type: {scannedData.format}</p>
+                                {error && (
+                                    <div className="scanner-error">
+                                        {error}
                                     </div>
+                                )}
+                            </div>
 
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Winkelnaam *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={storeName}
-                                            onChange={(e) => setStoreName(e.target.value)}
-                                            placeholder="Bijv. Albert Heijn"
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-turquoise"
-                                        />
+                            <div style={{ marginTop: 16 }}>
+                                <div className="scan-label-row">
+                                    <div className="field-label">Winkelnaam</div>
+                                    <span className="small-key-hint">Bijvoorbeeld: Albert Heijn, HEMA…</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    className="text-input"
+                                    placeholder="Naam van de winkel of keten"
+                                    value={storeName}
+                                    onChange={(e) => setStoreName(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ marginTop: 16 }}>
+                                <div className="scan-label-row">
+                                    <div className="field-label">Barcode</div>
+                                    <span className="small-key-hint">
+                                        {manualEntry ? 'Typ of plak de code' : 'Wordt automatisch ingevuld bij scannen'}
+                                    </span>
+                                </div>
+                                <input
+                                    type="text"
+                                    className="text-input"
+                                    placeholder="1234567890123"
+                                    value={manualEntry ? manualBarcode : (scannedData?.text || '')}
+                                    onChange={(e) => manualEntry && setManualBarcode(e.target.value)}
+                                    readOnly={!manualEntry}
+                                />
+                                <div className="helper-text">
+                                    {scannedData
+                                        ? <>Gescand formaat: <strong>{scannedData.format}</strong></>
+                                        : manualEntry
+                                            ? 'Gebruik de cijfers onder de barcode op je kaart.'
+                                            : 'Nog geen barcode gevonden. Scan een kaart of schakel over op handmatige invoer.'}
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: 16 }}>
+                                <div className="logo-picker-header">
+                                    <div className="logo-picker-title">Logo kiezen</div>
+                                    <div className="logo-picker-subtitle">
+                                        Optioneel, kies een icoon dat past bij de winkel
                                     </div>
+                                </div>
+                                <div className="logo-grid">
+                                    {presets.map(preset => (
+                                        <button
+                                            key={preset}
+                                            type="button"
+                                            className={`logo-option ${selectedLogo === preset ? 'selected' : ''}`}
+                                            onClick={() => setSelectedLogo(selectedLogo === preset ? null : preset)}
+                                        >
+                                            <div className="logo-fallback">
+                                                {preset.charAt(0).toUpperCase()}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="helper-text" style={{ marginTop: 6 }}>
+                                    Laat dit leeg als je alleen de winkelnaam wilt gebruiken.
+                                </div>
+                            </div>
 
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                                            Kies een logo (optioneel)
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {presetLogos.map(logo => (
-                                                <button
-                                                    key={logo}
-                                                    onClick={() => {
-                                                        setSelectedLogo(logo);
-                                                        // Auto-fill store name if empty
-                                                        if (!storeName) {
-                                                            setStoreName(logo);
-                                                        }
-                                                    }}
-                                                    className={`p-3 border-2 rounded-lg text-sm ${
-                                                        selectedLogo === logo 
-                                                            ? 'border-turquoise bg-blue-50' 
-                                                            : 'border-gray-200 bg-white'
-                                                    }`}
-                                                >
-                                                    {logo}
-                                                </button>
-                                            ))}
+                            <div style={{ marginTop: 16 }}>
+                                <div className="field-label">Voorbeeld weergave</div>
+                                <div className="barcode-preview">
+                                    <div className="badge badge-primary" style={{ marginBottom: 8 }}>
+                                        Voorvertoning pasje
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 12 }}>
+                                        <div className="card-logo" style={{ width: 90, height: 60 }}>
+                                            {selectedLogo ? (
+                                                <div className="logo-fallback">
+                                                    {selectedLogo.charAt(0).toUpperCase()}
+                                                </div>
+                                            ) : storeName ? (
+                                                <div className="logo-fallback">
+                                                    {storeName.trim().charAt(0).toUpperCase()}
+                                                </div>
+                                            ) : (
+                                                <div className="logo-fallback">
+                                                    💳
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div className="card-store-name">
+                                                {storeName || 'Winkelnaam'}
+                                            </div>
+                                            <div className="card-meta">
+                                                {(manualEntry ? manualBarcode : (scannedData?.text || 'Barcode volgt…'))}
+                                            </div>
+                                            <div className="badge-usage" style={{ marginTop: 6 }}>
+                                                <span className="usage-dot"></span>
+                                                Wordt opgeslagen op dit apparaat
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setScannedData(null);
-                                                setStoreName('');
-                                                setSelectedLogo(null);
-                                            }}
-                                            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-bold"
-                                        >
-                                            Annuleren
-                                        </button>
-                                        <button
-                                            onClick={saveCard}
-                                            className="flex-1 bg-turquoise text-white py-3 rounded-lg font-bold"
-                                        >
-                                            Opslaan
-                                        </button>
-                                    </div>
                                 </div>
-                            )}
+                            </div>
+
+                            <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div className="settings-note">
+                                    Je gegevens blijven alleen op dit apparaat.
+                                </div>
+                                <button
+                                    className="pill-button pill-primary"
+                                    onClick={handleSaveCard}
+                                >
+                                    ✅ Pasje opslaan
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -611,22 +1549,70 @@
             function CardsTab() {
                 const [selectedCard, setSelectedCard] = useState(null);
                 const [searchQuery, setSearchQuery] = useState('');
+                const [cardsDebug, setCardsDebug] = useState('');
                 const barcodeRef = useRef(null);
 
+                // Teken of update de barcode wanneer een kaart geselecteerd is
                 useEffect(() => {
-                    if (selectedCard && barcodeRef.current) {
-                        try {
-                            JsBarcode(barcodeRef.current, selectedCard.barcodeValue, {
-                                format: 'CODE128',
-                                width: 2,
-                                height: 100,
-                                displayValue: true,
-                                margin: 10
-                            });
-                        } catch (err) {
-                            console.error("Barcode error:", err);
-                        }
+                    if (!selectedCard || !barcodeRef.current) return;
+
+                    const el = barcodeRef.current;
+
+                    while (el.firstChild) {
+                        el.removeChild(el.firstChild);
                     }
+
+                    const value = selectedCard.barcodeValue || '';
+
+                    if (typeof JsBarcode === 'function') {
+                        let format = 'CODE128';
+
+                        if (selectedCard.barcodeFormat) {
+                            const map = {
+                                'EAN_13': 'EAN13',
+                                'EAN13': 'EAN13',
+                                'EAN_8': 'EAN8',
+                                'EAN8': 'EAN8',
+                                'CODE_128': 'CODE128',
+                                'CODE128': 'CODE128',
+                                'CODE_39': 'CODE39',
+                                'CODE39': 'CODE39',
+                                'UPC_A': 'UPC',
+                                'UPC_E': 'UPC',
+                                'QR_CODE': 'CODE128',
+                                'MANUAL_ENTRY': 'CODE128'
+                            };
+                            format = map[selectedCard.barcodeFormat] || 'CODE128';
+                        }
+
+                        try {
+                            JsBarcode(el, value, {
+                                format,
+                                width: 3,
+                                height: 120,
+                                displayValue: true,
+                                margin: 10,
+                                fontSize: 20
+                            });
+                            return;
+                        } catch (err) {
+                            console.error('JsBarcode error:', err);
+                            setCardsDebug('JsBarcode error: ' + err.message);
+                        }
+                    } else {
+                        setCardsDebug('JsBarcode is niet geladen — toon tekst in plaats van barcode.');
+                    }
+
+                    const svgNS = 'http://www.w3.org/2000/svg';
+                    const text = document.createElementNS(svgNS, 'text');
+                    text.setAttribute('x', '50%');
+                    text.setAttribute('y', '50%');
+                    text.setAttribute('dominant-baseline', 'middle');
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-size', '24');
+                    text.setAttribute('font-family', 'monospace');
+                    text.textContent = value || 'GEEN BARCODE';
+                    el.appendChild(text);
                 }, [selectedCard]);
 
                 const sortedCards = [...cards].sort((a, b) => {
@@ -646,86 +1632,213 @@
 
                 if (selectedCard) {
                     return (
-                        <div className="barcode-fullscreen">
+                        <div className="barcode-fullscreen top-safe-area">
                             <button
-                                onClick={() => setSelectedCard(null)}
-                                className="absolute top-4 left-4 bg-white p-2 rounded-full shadow-lg z-30"
+                                className="pill-button pill-outline"
+                                style={{ position: 'absolute', top: 16, left: 16 }}
+                                onClick={() => {
+                                    setSelectedCard(null);
+                                    setCardsDebug('');
+                                }}
                             >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                ⬅︎ Terug
                             </button>
-
-                            <div className="text-center px-4">
-                                <h2 className="text-2xl font-bold mb-4">{selectedCard.storeName}</h2>
-                                <div className="bg-white p-8 rounded-lg shadow-xl">
-                                    <svg ref={barcodeRef}></svg>
+                            <div className="barcode-fullscreen-inner">
+                                <div style={{ marginBottom: 10 }}>
+                                    <span className="tab-badge">Pasje tonen</span>
                                 </div>
-                                <p className="text-gray-600 mt-4 font-mono text-sm">
-                                    {selectedCard.barcodeValue}
-                                </p>
+
+                                <div className="barcode-card">
+                                    <div className="barcode-title">
+                                        {selectedCard.storeName}
+                                    </div>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span className="barcode-format-pill">
+                                            <span>Barcode</span>
+                                            <span style={{ opacity: 0.8 }}>
+                                                {selectedCard.barcodeFormat || 'Onbekend formaat'}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <svg
+                                            ref={barcodeRef}
+                                            className="barcode-svg"
+                                            preserveAspectRatio="xMidYMid meet"
+                                        ></svg>
+                                    </div>
+                                    <div className="barcode-value">
+                                        {selectedCard.barcodeValue}
+                                    </div>
+                                </div>
+
+                                <div className="barcode-help-text">
+                                    Houd dit scherm onder de scanner bij de kassa.<br />
+                                    Tip: zet je schermhelderheid wat hoger.
+                                </div>
+
+                                {cardsDebug && (
+                                    <div style={{ marginTop: 12 }}>
+                                        <div className="info-banner">
+                                            <strong>Debug info:</strong> {cardsDebug}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
                 }
 
+                const defaultEmpty = (
+                    <div style={{ padding: '40px 24px 24px', textAlign: 'center' }}>
+                        <div className="empty-state-icon">
+                            💳
+                        </div>
+                        <div className="empty-state-title">
+                            Nog geen pasjes
+                        </div>
+                        <div className="empty-state-text">
+                            Scan de barcode van je eerste membership card en bewaar hem als digitaal pasje.
+                        </div>
+                        <div className="empty-state-action">
+                            <button
+                                className="pill-button pill-primary"
+                                onClick={() => setActiveTab('scan')}
+                            >
+                                📷 Eerste pasje scannen
+                            </button>
+                        </div>
+                    </div>
+                );
+
+                const hasRealCards = cards.some(c => !c.isSample);
+                const totalCards = cards.length;
+                const mostUsedCard = cards.reduce((top, card) => {
+                    if (!card.usageCount) return top;
+                    if (!top || (card.usageCount || 0) > (top.usageCount || 0)) {
+                        return card;
+                    }
+                    return top;
+                }, null);
+
                 return (
-                    <div className="flex flex-col h-full bg-gray-50">
-                        <div className="bg-teal text-white app-header shadow-md">
-                            <h1 className="text-xl font-bold mb-3">Mijn Pasjes</h1>
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="ðŸ” Zoek pasje..."
-                                className="w-full px-4 py-2 rounded-lg text-gray-900"
-                            />
+                    <div className="content scroll-area">
+                        <div className="section-header">
+                            <div className="cards-header-row">
+                                <div className="cards-header-text">
+                                    <div className="section-title">Mijn pasjes</div>
+                                    <div className="section-subtitle">
+                                        Tik op een pasje om de barcode schermvullend te tonen.
+                                    </div>
+                                </div>
+                                <div className="cards-count-pill">
+                                    {hasRealCards
+                                        ? `${totalCards} pasje${totalCards === 1 ? '' : 's'}`
+                                        : 'Voorbeeld actief'}
+                                </div>
+                            </div>
+                            <div className="cards-tagline">
+                                Alleen op dit toestel opgeslagen. Geen cloud, geen gedoe.
+                            </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto">
-                            {filteredCards.length === 0 ? (
-                                <div className="text-center py-12 px-4">
-                                    <div className="text-6xl mb-4">ðŸ’³</div>
-                                    <h3 className="text-xl font-bold text-gray-700 mb-2">
-                                        Nog geen pasjes
-                                    </h3>
-                                    <p className="text-gray-600 mb-6">
-                                        Scan je eerste membership card om te beginnen!
-                                    </p>
+                        <div style={{ padding: '0 16px 10px' }}>
+                            <input
+                                type="text"
+                                className="text-input"
+                                placeholder="🔍 Zoek op winkelnaam"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            <div className="cards-search-hint">
+                                Begin met typen om je pasjes snel te vinden.
+                            </div>
+                        </div>
+
+                        {mostUsedCard && (
+                            <div className="cards-section">
+                                <div className="cards-section-label">Meest gebruikt</div>
+                                <div className="cards-section-inner">
                                     <button
-                                        onClick={() => setActiveTab('scan')}
-                                        className="bg-coral text-white px-6 py-3 rounded-full font-bold"
+                                        className="card-button"
+                                        onClick={() => {
+                                            setSelectedCard(mostUsedCard);
+                                            useCard(mostUsedCard.id);
+                                            setCardsDebug(`Kaart geklikt: ${mostUsedCard.storeName} (meest gebruikt)`);
+                                        }}
                                     >
-                                        Scan Eerste Pasje
+                                        <div className="card-logo">
+                                            {mostUsedCard.logoType === 'preset' ? (
+                                                <div className="logo-fallback">
+                                                    {mostUsedCard.logoData.charAt(0).toUpperCase()}
+                                                </div>
+                                            ) : (
+                                                <div className="logo-fallback">
+                                                    {mostUsedCard.logoData || mostUsedCard.storeName.charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="card-info">
+                                            <div className="card-store-name">
+                                                {mostUsedCard.storeName}
+                                            </div>
+                                            <div className="card-meta">
+                                                <span className="usage-dot"></span>
+                                                {mostUsedCard.usageCount || 0}x gebruikt
+                                            </div>
+                                        </div>
                                     </button>
                                 </div>
-                            ) : (
-                                <div className="card-grid">
-                                    {filteredCards.map((card) => (
-                                        <button
-                                            key={card.id}
-                                            onClick={() => {
-                                                console.log('Card clicked:', card.storeName);
-                                                setSelectedCard(card);
-                                                useCard(card.id);
-                                            }}
-                                            className="card-button"
-                                            style={{ 
-                                                cursor: 'pointer',
-                                                WebkitTapHighlightColor: 'rgba(78, 205, 196, 0.3)'
-                                            }}
-                                        >
-                                            <div className="card-logo bg-gradient-to-br from-coral to-turquoise flex items-center justify-center text-white text-3xl font-bold">
-                                                {card.logoData || card.storeName.charAt(0).toUpperCase()}
-                                            </div>
-                                            <p className="mt-3 font-bold text-sm text-center px-2">
+                            </div>
+                        )}
+
+                        {filteredCards.length === 0 ? (
+                            defaultEmpty
+                        ) : (
+                            <div className="card-grid">
+                                {filteredCards.map(card => (
+                                    <button
+                                        key={card.id}
+                                        className="card-button"
+                                        onClick={() => {
+                                            setSelectedCard(card);
+                                            useCard(card.id);
+                                            setCardsDebug(`Kaart geklikt: ${card.storeName}, barcode: ${card.barcodeValue}, formaat: ${card.barcodeFormat}`);
+                                        }}
+                                    >
+                                        <div className="card-logo">
+                                            {card.logoType === 'preset' ? (
+                                                <div className="logo-fallback">
+                                                    {card.logoData.charAt(0).toUpperCase()}
+                                                </div>
+                                            ) : (
+                                                <div className="logo-fallback">
+                                                    {(card.logoData || card.storeName.charAt(0)).toUpperCase()}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="card-info">
+                                            <div className="card-store-name">
                                                 {card.storeName}
-                                            </p>
-                                        </button>
-                                    ))}
+                                            </div>
+                                            <div className="card-meta">
+                                                {card.lastUsed
+                                                    ? <>Laatst gebruikt: {new Date(card.lastUsed).toLocaleDateString()}</>
+                                                    : 'Nog niet gebruikt'}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {cardsDebug && (
+                            <div className="debug-banner">
+                                <div className="debug-banner-inner">
+                                    <strong>Debug:</strong> {cardsDebug}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 );
             }
@@ -747,95 +1860,176 @@
                     a.href = url;
                     a.download = `pashie-backup-${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
+                    URL.revokeObjectURL(url);
                 };
 
-                const importData = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            try {
-                                const data = JSON.parse(event.target.result);
-                                if (data.cards) setCards(data.cards);
-                                if (data.settings) setSettings(data.settings);
-                                alert('Data succesvol geÃ¯mporteerd!');
-                            } catch (err) {
-                                alert('Fout bij importeren: ' + err.message);
+                const importData = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            if (!imported.cards || !Array.isArray(imported.cards)) {
+                                throw new Error('Ongeldig bestand. Geen kaarten gevonden.');
                             }
-                        };
-                        reader.readAsText(file);
+                            setCards(imported.cards);
+                            if (imported.settings) {
+                                setSettings(imported.settings);
+                            }
+                            alert('Gegevens succesvol geïmporteerd!');
+                        } catch (err) {
+                            alert('Fout bij importeren: ' + err.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+
+                const handleDeleteCard = (card) => {
+                    if (confirm(`Weet je zeker dat je het pasje voor "${card.storeName}" wilt verwijderen?`)) {
+                        deleteCard(card.id);
+                        if (editingCard && editingCard.id === card.id) {
+                            setEditingCard(null);
+                        }
                     }
                 };
 
+                const sortedByName = [...cards].sort((a, b) => a.storeName.localeCompare(b.storeName));
+
                 return (
-                    <div className="flex flex-col h-full bg-gray-50">
-                        <div className="bg-teal text-white app-header shadow-md">
-                            <h1 className="text-xl font-bold">Instellingen</h1>
+                    <div className="content scroll-area">
+                        <div className="section-header">
+                            <div className="section-title">Instellingen</div>
+                            <div className="section-subtitle">Beheer je pasjes, sortering en back-ups.</div>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-4 space-y-6">
-                            {/* Sort Settings */}
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-3">Sortering</h3>
-                                <select
-                                    value={settings.sortBy}
-                                    onChange={(e) => setSettings({ ...settings, sortBy: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                                >
-                                    <option value="alphabetical">Alfabetisch</option>
-                                    <option value="dateAdded">Nieuwste eerst</option>
-                                    <option value="mostUsed">Meest gebruikt</option>
-                                </select>
+                        <div style={{ padding: '0 16px 16px', display: 'grid', gap: 12 }}>
+                            <div className="settings-section">
+                                <div className="settings-title">Sortering</div>
+                                <div className="settings-description">
+                                    Kies hoe je pasjes standaard worden gesorteerd in het overzicht.
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button
+                                        className="pill-button"
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center',
+                                            background: settings.sortBy === 'alphabetical' ? 'var(--turquoise)' : 'white',
+                                            color: settings.sortBy === 'alphabetical' ? '#fff' : '#2D3748',
+                                            border: settings.sortBy === 'alphabetical' ? 'none' : '1px solid #E2E8F0'
+                                        }}
+                                        onClick={() => setSettings(prev => ({ ...prev, sortBy: 'alphabetical' }))}
+                                    >
+                                        A → Z
+                                    </button>
+                                    <button
+                                        className="pill-button"
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center',
+                                            background: settings.sortBy === 'dateAdded' ? 'var(--turquoise)' : 'white',
+                                            color: settings.sortBy === 'dateAdded' ? '#fff' : '#2D3748',
+                                            border: settings.sortBy === 'dateAdded' ? 'none' : '1px solid #E2E8F0'
+                                        }}
+                                        onClick={() => setSettings(prev => ({ ...prev, sortBy: 'dateAdded' }))}
+                                    >
+                                        Nieuwste eerst
+                                    </button>
+                                    <button
+                                        className="pill-button"
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center',
+                                            background: settings.sortBy === 'mostUsed' ? 'var(--turquoise)' : 'white',
+                                            color: settings.sortBy === 'mostUsed' ? '#fff' : '#2D3748',
+                                            border: settings.sortBy === 'mostUsed' ? 'none' : '1px solid #E2E8F0'
+                                        }}
+                                        onClick={() => setSettings(prev => ({ ...prev, sortBy: 'mostUsed' }))}
+                                    >
+                                        Meest gebruikt
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Cards List */}
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-3">Mijn Pasjes ({cards.length})</h3>
+                            <div className="settings-section">
+                                <div className="settings-title">Back-up & herstel</div>
+                                <div className="settings-description">
+                                    Maak een back-up van al je pasjes of herstel vanaf een eerder opgeslagen bestand.
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <button
+                                        className="pill-button pill-outline"
+                                        onClick={exportData}
+                                    >
+                                        💾 Exporteer gegevens
+                                    </button>
+                                    <label className="file-input-label">
+                                        📂 Importeer back-up
+                                        <input type="file" accept="application/json" onChange={importData} />
+                                    </label>
+                                </div>
+                                <div className="settings-note" style={{ marginTop: 6 }}>
+                                    De back-up bevat alleen data voor deze app. Je barcodegegevens blijven lokaal.
+                                </div>
+                            </div>
+
+                            <div className="settings-section">
+                                <div className="settings-title">Pasjes beheren</div>
+                                <div className="settings-description">
+                                    Verwijder pasjes die je niet meer gebruikt. Nieuwe pasjes voeg je toe via de Scan-tab.
+                                </div>
+
                                 {cards.length === 0 ? (
-                                    <p className="text-gray-500 text-sm">Nog geen pasjes toegevoegd</p>
+                                    <div className="info-banner">
+                                        Je hebt nog geen pasjes. Voeg eerst een pasje toe via <strong>Scan</strong>.
+                                    </div>
                                 ) : (
-                                    <div className="space-y-2">
-                                        {cards.map(card => (
-                                            <div key={card.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                                <div className="flex-1">
-                                                    <p className="font-bold">{card.storeName}</p>
-                                                    <p className="text-xs text-gray-500">{card.barcodeValue}</p>
+                                    <div style={{ maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                                        {sortedByName.map(card => (
+                                            <div
+                                                key={card.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '6px 0',
+                                                    borderBottom: '1px solid rgba(226,232,240,0.8)'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <div className="logo-fallback" style={{ width: 30, height: 30, fontSize: 14 }}>
+                                                        {(card.logoData || card.storeName.charAt(0)).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: 13, fontWeight: 600 }}>{card.storeName}</div>
+                                                        <div style={{ fontSize: 11, color: '#A0AEC0' }}>
+                                                            {card.usageCount || 0}x gebruikt
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => {
-                                                        if (confirm(`${card.storeName} verwijderen?`)) {
-                                                            deleteCard(card.id);
-                                                        }
-                                                    }}
-                                                    className="bg-red-500 text-white px-3 py-1 rounded text-sm"
-                                                >
-                                                    Verwijder
-                                                </button>
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    <button
+                                                        className="danger-button"
+                                                        onClick={() => handleDeleteCard(card)}
+                                                    >
+                                                        Verwijder
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Backup */}
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-3">Backup</h3>
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={exportData}
-                                        className="w-full bg-turquoise text-white py-2 rounded-lg font-bold"
-                                    >
-                                        ðŸ“¥ Exporteer Data
-                                    </button>
-                                    <label className="block">
-                                        <span className="sr-only">Importeer backup</span>
-                                        <input
-                                            type="file"
-                                            accept=".json"
-                                            onChange={importData}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-gold file:text-white hover:file:bg-opacity-90"
-                                        />
-                                    </label>
+                            <div className="settings-section">
+                                <div className="settings-title">Over Pashie</div>
+                                <div className="settings-description">
+                                    Pashie is een eenvoudige, privacyvriendelijke app om je fysieke klantenkaarten digitaal mee te nemen.
+                                </div>
+                                <div style={{ fontSize: 11, color: '#A0AEC0' }}>
+                                    Alle pasjes worden alleen op dit apparaat opgeslagen. Er is geen account, geen cloud en geen tracking.
                                 </div>
                             </div>
                         </div>
@@ -846,107 +2040,129 @@
             // Help Tab Component
             function HelpTab() {
                 return (
-                    <div className="flex flex-col h-full bg-gray-50">
-                        <div className="bg-teal text-white app-header shadow-md">
-                            <h1 className="text-xl font-bold">Help & Info</h1>
+                    <div className="content scroll-area">
+                        <div className="section-header">
+                            <div className="section-title">Help & uitleg</div>
+                            <div className="section-subtitle">Zo haal je het meeste uit Pashie.</div>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-4 space-y-4">
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Welkom bij Pashie! ðŸ‘‹</h3>
-                                <p className="text-gray-700 text-sm">
-                                    Pashie is je digitale wallet voor alle membership cards. 
-                                    Geen dikke portemonnee meer - al je pasjes in Ã©Ã©n app!
-                                </p>
+                        <div style={{ padding: '0 16px 16px', display: 'grid', gap: 12 }}>
+                            <div className="settings-section">
+                                <h3 className="settings-title">Hoe werkt het?</h3>
+                                <ul className="help-list">
+                                    <li>Ga naar de <strong>Scan</strong>-tab om een nieuw pasje toe te voegen.</li>
+                                    <li>Scan de barcode van je fysieke kaart met de camera of voer de code handmatig in.</li>
+                                    <li>Geef de winkelnaam op en kies eventueel een logo-icoon.</li>
+                                    <li>Sla het pasje op. Het verschijnt daarna in de <strong>Cards</strong>-tab.</li>
+                                    <li>Tik op een pasje in de <strong>Cards</strong>-tab om de barcode schermvullend te tonen.</li>
+                                </ul>
                             </div>
 
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Hoe werkt het?</h3>
-                                <div className="space-y-2 text-sm text-gray-700">
-                                    <p><strong>1.</strong> Ga naar de Scan tab</p>
-                                    <p><strong>2.</strong> Scan de barcode van je membership card</p>
-                                    <p><strong>3.</strong> Voer de winkelnaam in</p>
-                                    <p><strong>4.</strong> Kies een logo of laat leeg</p>
-                                    <p><strong>5.</strong> Opslaan!</p>
-                                    <p className="pt-2"><strong>Gebruik:</strong> Tik op een pasje in de Cards tab om de barcode te tonen</p>
+                            <div className="settings-section">
+                                <h3 className="settings-title">Tips voor scannen</h3>
+                                <ul className="help-list">
+                                    <li>Zorg voor voldoende licht en houd de kaart stil.</li>
+                                    <li>Probeer én de streepjescode én een eventuele QR-code; soms werkt de ene beter dan de andere.</li>
+                                    <li>Als de camera moeilijk doet, gebruik de optie <strong>Handmatig invoeren</strong>.</li>
+                                </ul>
+                            </div>
+
+                            <div className="settings-section">
+                                <h3 className="settings-title">Privacy & opslag</h3>
+                                <ul className="help-list">
+                                    <li>Alle pasjes worden <strong>alleen op dit apparaat</strong> opgeslagen.</li>
+                                    <li>Er is geen online account en er worden geen gegevens gedeeld met een server.</li>
+                                    <li>Je kunt zelf een back-up maken via de <strong>Instellingen</strong>-tab.</li>
+                                </ul>
+                            </div>
+
+                            <div className="settings-section">
+                                <h3 className="settings-title">Problemen?</h3>
+                                <ul className="help-list">
+                                    <li>Zorg dat je browser of web-app toegang heeft tot de camera.</li>
+                                    <li>Als barcodes niet goed getoond worden, probeer de pagina te verversen.</li>
+                                    <li>Gebruik de debug-meldingen onderaan het scherm als je ontwikkelaar bent of hulp vraagt.</li>
+                                </ul>
+                                <div style={{ marginTop: 8 }}>
+                                    <span className="help-chip">
+                                        <span>💡 Tip</span>
+                                        <span>Voeg Pashie toe aan je startscherm voor een app-ervaring.</span>
+                                    </span>
                                 </div>
-                            </div>
-
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Tips</h3>
-                                <div className="space-y-1 text-sm text-gray-700">
-                                    <p>â€¢ Zorg voor goede belichting bij scannen</p>
-                                    <p>â€¢ Houd de barcode stil en recht</p>
-                                    <p>â€¢ Gebruik de zoekfunctie voor snelle toegang</p>
-                                    <p>â€¢ Maak regelmatig een backup</p>
-                                    <p>â€¢ De app werkt volledig offline!</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h3 className="font-bold text-lg mb-2">Privacy</h3>
-                                <p className="text-sm text-gray-700">
-                                    Al je data wordt lokaal op je telefoon opgeslagen. 
-                                    Pashie stuurt geen informatie naar externe servers. 
-                                    Jij hebt volledige controle over je gegevens.
-                                </p>
-                            </div>
-
-                            <div className="text-center text-sm text-gray-500 py-4">
-                                <p>Pashie v1.0.0</p>
-                                <p className="mt-1">Made with ðŸ’³ for easy shopping</p>
                             </div>
                         </div>
                     </div>
                 );
             }
 
+            // Main render
             return (
-                <div className="flex flex-col h-screen bg-white">
-                    <div className="flex-1 overflow-hidden">
+                <div className="app-container">
+                    {showSplash && (
+                        <div className="splash-container fade-out">
+                            <div className="splash-inner">
+                                <div className="splash-circle">
+                                    <div className="splash-circle-inner">
+                                        <div className="splash-card">
+                                            <div className="splash-card-line"></div>
+                                            <div className="splash-card-line" style={{ width: '70%' }}></div>
+                                            <div style={{ display: 'flex', marginTop: 4 }}>
+                                                <div className="splash-card-chip"></div>
+                                            </div>
+                                        </div>
+                                        <div className="splash-ornament one"></div>
+                                        <div className="splash-ornament two"></div>
+                                    </div>
+                                </div>
+                                <div className="splash-logo">Pashie</div>
+                                <div className="splash-subtitle">All your cards, one happy pocket</div>
+                                <div className="splash-pill">
+                                    💳
+                                    <span>Membership cards in your pocket</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="content">
                         {activeTab === 'scan' && <ScanTab />}
                         {activeTab === 'cards' && <CardsTab />}
                         {activeTab === 'settings' && <SettingsTab />}
                         {activeTab === 'help' && <HelpTab />}
                     </div>
 
-                    <div className="flex border-t bg-white bottom-nav">
-                        <button 
-                            onClick={() => setActiveTab('scan')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'scan' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <ScanIcon />
-                            <span className="text-xs mt-1">Scan</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('cards')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'cards' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <div className="relative">
+                    <nav className="bottom-nav">
+                        <div className="bottom-nav-inner">
+                            <button
+                                className={`nav-button ${activeTab === 'scan' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('scan')}
+                            >
+                                <ScanIcon />
+                                <span className="nav-label">Scan</span>
+                            </button>
+                            <button
+                                className={`nav-button ${activeTab === 'cards' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('cards')}
+                            >
                                 <CardsIcon />
-                                {cards.length > 0 && (
-                                    <span className="absolute -top-1 -right-2 bg-coral text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                        {cards.length}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="text-xs mt-1">Cards</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('settings')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'settings' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <SettingsIcon />
-                            <span className="text-xs mt-1">Settings</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('help')} 
-                            className={`flex-1 flex flex-col items-center py-3 ${activeTab === 'help' ? 'text-turquoise' : 'text-gray-400'}`}
-                        >
-                            <HelpIcon />
-                            <span className="text-xs mt-1">Help</span>
-                        </button>
-                    </div>
+                                <span className="nav-label">Cards</span>
+                            </button>
+                            <button
+                                className={`nav-button ${activeTab === 'settings' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('settings')}
+                            >
+                                <SettingsIcon />
+                                <span className="nav-label">Settings</span>
+                            </button>
+                            <button
+                                className={`nav-button ${activeTab === 'help' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('help')}
+                            >
+                                <HelpIcon />
+                                <span className="nav-label">Help</span>
+                            </button>
+                        </div>
+                    </nav>
                 </div>
             );
         }
