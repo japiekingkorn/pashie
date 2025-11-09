@@ -779,7 +779,7 @@
       };
     }, []);
 
-    // *** hier de aangepaste timeout: altijd na 3s naar handmatige invoer als er nog niks is ***
+    // *** hier de aangepaste timeout: altijd na 5s naar handmatige invoer als er nog niks is ***
     function startTimeout() {
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       scanTimeoutRef.current = setTimeout(async () => {
@@ -793,7 +793,7 @@
         setScanning(false);
         setBarcodeFormat("MANUAL_ENTRY");
         setStep("details");
-      }, 3000); // 3 seconden
+      }, 5000); // 5 seconden
     }
 
     async function startScan() {
