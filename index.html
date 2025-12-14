@@ -16,14 +16,12 @@
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- ZXing (fallback scanner) -->
+  <!-- ZXing (scanner) -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 
-  <!-- JsBarcode (generate barcode from digits) -->
+  <!-- JsBarcode (generate barcode) -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
-  <!-- Tesseract (OCR fallback to read digits) -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <style>
     :root {
@@ -51,7 +49,6 @@
       box-shadow: 0 0 30px rgba(0,0,0,0.08);
       position: relative;
     }
-
     .app { display: flex; flex-direction: column; min-height: 100vh; }
     .content { flex: 1; overflow-y: auto; padding: 16px; }
 
@@ -148,6 +145,49 @@
     }
     .button-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
+    .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .card-item {
+      border-radius: 14px;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      display: flex; flex-direction: column;
+      align-items: stretch; justify-content: space-between;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      position: relative;
+    }
+    .card-image {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .card-overlay {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 10px;
+      background: linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0));
+      color: #fff;
+    }
+    .card-title { font-size: 16px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+    .card-sub { font-size: 12px; opacity: 0.92; }
+    .card-plain-center {
+      padding: 12px;
+      height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      gap: 6px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .empty-icon { font-size: 38px; margin-bottom: 8px; }
+
     .scan-box {
       border-radius: 12px;
       border: 1px dashed #cbd5e0;
@@ -190,22 +230,6 @@
       color: #f7fafc;
       text-shadow: 0 1px 2px rgba(0,0,0,0.7);
     }
-    .scan-status {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #2d3748;
-      display:flex; align-items:center; justify-content:space-between; gap:8px;
-    }
-    .pill {
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: #e2e8f0;
-      color: #2d3748;
-    }
 
     .error-box {
       margin-top: 8px;
@@ -225,46 +249,7 @@
       font-size: 13px;
     }
 
-    /* tiles */
-    .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .card-item {
-      border-radius: 14px;
-      background: #f7fafc;
-      border: 1px solid #e2e8f0;
-      cursor: pointer;
-      display: flex; flex-direction: column;
-      align-items: stretch; justify-content: space-between;
-      aspect-ratio: 1 / 1;
-      overflow: hidden;
-      position: relative;
-    }
-    .card-image {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover;
-    }
-    .card-overlay {
-      position: absolute;
-      left: 0; right: 0; bottom: 0;
-      padding: 10px;
-      background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0));
-      color: #fff;
-    }
-    .card-title { font-size: 16px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
-    .card-sub { font-size: 12px; opacity: 0.9; }
-    .card-plain-center {
-      padding: 12px;
-      height: 100%;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      gap: 6px;
-    }
-
-    .empty-state { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 13px; }
-    .empty-icon { font-size: 38px; margin-bottom: 8px; }
-
-    /* overlay */
+    /* overlays / modals */
     .fullscreen-overlay {
       position: fixed; inset: 0;
       background: rgba(15,23,42,0.95);
@@ -320,7 +305,6 @@
       border-radius: 14px;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,0.12);
-      touch-action: none;
     }
     .crop-stage img {
       position: absolute;
@@ -329,6 +313,7 @@
       transform: translate(-50%, -50%);
       transform-origin: center center;
       user-select: none;
+      touch-action: none;
       -webkit-user-drag: none;
     }
     .crop-mask {
@@ -342,14 +327,12 @@
       box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
     }
     .crop-controls {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      margin-top:10px;
-      flex-wrap:wrap;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
     }
-
     .toggle-row {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px;
@@ -362,7 +345,7 @@
     .toggle-row label { font-size: 13px; font-weight: 700; }
     .toggle-row input { transform: scale(1.1); }
 
-    /* Splash */
+    /* Splashscreen */
     .splash-overlay {
       position: absolute; inset: 0;
       background: radial-gradient(circle at top, #ff6b6b 0, #1a7b7b 45%, #0b2545 100%);
@@ -405,18 +388,54 @@
 <script type="text/babel">
   const { useEffect, useMemo, useRef, useState } = React;
 
-  /***********************
-   * JSON Storage
-   ***********************/
+  // --- Script loader (fallback for iOS/CDN quirks) ---
+  const __loadedScripts = new Set();
+  function loadScriptOnce(url) {
+    return new Promise((resolve, reject) => {
+      if (__loadedScripts.has(url)) return resolve(true);
+      const s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = () => { __loadedScripts.add(url); resolve(true); };
+      s.onerror = () => reject(new Error('Failed to load ' + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureScannerLibs() {
+    // ZXing (try multiple CDNs)
+    if (!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader)) {
+      const zxingUrls = [
+        "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js",
+        "https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"
+      ];
+      for (const u of zxingUrls) {
+        try { await loadScriptOnce(u); } catch {}
+        if (window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader) break;
+      }
+    }
+    // Quagga2 (try multiple CDNs)
+    if (!(window.Quagga && window.Quagga.init)) {
+      const quaggaUrls = [
+        "https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js",
+        "https://unpkg.com/@ericblade/quagga2@1.8.4/dist/quagga.min.js"
+      ];
+      for (const u of quaggaUrls) {
+        try { await loadScriptOnce(u); } catch {}
+        if (window.Quagga && window.Quagga.init) break;
+      }
+    }
+    return {
+      hasZXing: !!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader),
+      hasQuagga: !!(window.Quagga && window.Quagga.init)
+    };
+  }
+
   function loadStorage(key, fallback) {
-    try { const val = localStorage.getItem(key); return val ? JSON.parse(val) : fallback; }
-    catch { return fallback; }
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
   }
   function saveStorage(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
 
-  /***********************
-   * IndexedDB for images
-   ***********************/
   const DB_NAME = "pashie_db";
   const DB_VERSION = 1;
   const STORE_IMAGES = "images";
@@ -426,9 +445,7 @@
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains(STORE_IMAGES)) {
-          db.createObjectStore(STORE_IMAGES, { keyPath: "id" });
-        }
+        if (!db.objectStoreNames.contains(STORE_IMAGES)) db.createObjectStore(STORE_IMAGES, { keyPath: "id" });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -445,7 +462,6 @@
       tx.onerror = () => reject(tx.error);
     });
   }
-
   async function idbGetImage(id) {
     if (!id) return null;
     const db = await idbOpen();
@@ -456,7 +472,6 @@
       req.onerror = () => reject(req.error);
     });
   }
-
   async function idbDeleteImage(id) {
     if (!id) return;
     const db = await idbOpen();
@@ -471,51 +486,6 @@
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
   function blobToObjectUrl(blob) { return blob ? URL.createObjectURL(blob) : null; }
 
-  /***********************
-   * Scan engine (multi-layer)
-   * 1) BarcodeDetector (if available)
-   * 2) ZXing (fallback)
-   * 3) OCR digits from frame (fallback)
-   ***********************/
-  function isBarcodeDetectorAvailable() {
-    return typeof window.BarcodeDetector === "function";
-  }
-
-  function normalizeDigitsCandidate(text) {
-    if (!text) return "";
-    // keep digits only, allow spaces removed
-    const digits = String(text).replace(/[^\d]/g, "");
-    return digits;
-  }
-
-  function pickBestDigitsFromText(text) {
-    if (!text) return "";
-    // Find longest digit run of length >= 6
-    const runs = String(text).match(/\d{6,20}/g);
-    if (!runs || runs.length === 0) return "";
-    runs.sort((a,b) => b.length - a.length);
-    return runs[0];
-  }
-
-  async function ocrDigitsFromCanvas(canvas) {
-    if (!window.Tesseract) throw new Error("OCR library ontbreekt (Tesseract).");
-    const worker = await window.Tesseract.createWorker("eng");
-    try {
-      await worker.setParameters({
-        tessedit_char_whitelist: "0123456789",
-        classify_bln_numeric_mode: 1,
-      });
-      const { data } = await worker.recognize(canvas);
-      const best = pickBestDigitsFromText(data?.text || "");
-      return best;
-    } finally {
-      try { await worker.terminate(); } catch {}
-    }
-  }
-
-  /***********************
-   * App
-   ***********************/
   function App() {
     const [activeTab, setActiveTab] = useState("cards");
     const [cards, setCards] = useState(() => loadStorage("pashie_cards", []));
@@ -525,41 +495,19 @@
 
     useEffect(() => saveStorage("pashie_cards", cards), [cards]);
     useEffect(() => saveStorage("pashie_sort", sortBy), [sortBy]);
-
-    useEffect(() => {
-      const t = setTimeout(() => setShowSplash(false), 2600);
-      return () => clearTimeout(t);
-    }, []);
+    useEffect(() => { const t = setTimeout(() => setShowSplash(false), 2600); return () => clearTimeout(t); }, []);
 
     function addCard(card) { setCards(prev => [...prev, card]); }
-
-    async function updateCard(id, updates) {
-      // If replacing images, delete old blobs
-      const prev = cards.find(c => c.id === id);
-      if (prev) {
-        if (updates.cardImageId && prev.cardImageId && updates.cardImageId !== prev.cardImageId) {
-          await idbDeleteImage(prev.cardImageId);
-        }
-        if (updates.barcodeImageId && prev.barcodeImageId && updates.barcodeImageId !== prev.barcodeImageId) {
-          await idbDeleteImage(prev.barcodeImageId);
-        }
-      }
-      setCards(prevCards => prevCards.map(c => (c.id === id ? { ...c, ...updates } : c)));
-    }
-
+    function updateCard(id, updates) { setCards(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c))); }
     function markUsed(id) {
-      setCards(prev => prev.map(c =>
-        c.id === id ? { ...c, lastUsed: new Date().toISOString(), usageCount: (c.usageCount || 0) + 1 } : c
-      ));
+      setCards(prev => prev.map(c => c.id === id ? { ...c, lastUsed: new Date().toISOString(), usageCount: (c.usageCount || 0) + 1 } : c));
     }
-
     async function deleteCard(id) {
       const c = cards.find(x => x.id === id);
       if (c?.cardImageId) await idbDeleteImage(c.cardImageId);
       if (c?.barcodeImageId) await idbDeleteImage(c.barcodeImageId);
       setCards(prev => prev.filter(x => x.id !== id));
     }
-
     function sortedCards() {
       const arr = [...cards];
       if (sortBy === "alphabetical") return arr.sort((a,b) => (a.storeName || "").localeCompare(b.storeName || ""));
@@ -573,9 +521,7 @@
         {showSplash && (
           <div className="splash-overlay">
             <div className="splash-inner">
-              <div className="splash-logo-circle">
-                <img src="icons/icon-192.png" alt="Pashie" />
-              </div>
+              <div className="splash-logo-circle"><img src="icons/icon-192.png" alt="Pashie" /></div>
               <div className="splash-name">Pashie</div>
               <div className="splash-subtitle">Membership cards in your pocket</div>
               <div className="splash-tagline">💳 Eén plek voor al je pasjes – lokaal, simpel, snel.</div>
@@ -585,9 +531,7 @@
 
         <header className="header">
           <div className="header-inner">
-            <div className="header-logo-box">
-              <img className="header-logo-img" src="icons/icon-192.png" alt="Pashie" />
-            </div>
+            <div className="header-logo-box"><img className="header-logo-img" src="icons/icon-192.png" alt="Pashie" /></div>
             <div style={{display:"flex", flexDirection:"column"}}>
               <div className="header-title">Pashie</div>
               <div className="header-subtitle">Je klantenkaarten altijd bij de hand — zonder account.</div>
@@ -596,67 +540,31 @@
         </header>
 
         <main className="content">
-          {activeTab === "scan" && (
-            <ScanTab
-              onSaved={(card) => { addCard(card); setActiveTab("cards"); }}
-            />
-          )}
-          {activeTab === "cards" && (
-            <CardsTab
-              cards={sortedCards()}
-              sortBy={sortBy}
-              onOpenCard={(card) => { setSelectedCard(card); markUsed(card.id); }}
-            />
-          )}
-          {activeTab === "settings" && (
-            <SettingsTab
-              cards={cards}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              onDeleteCard={deleteCard}
-              onEditCard={updateCard}
-            />
-          )}
+          {activeTab === "scan" && <ScanTab onSaved={(card) => { addCard(card); setActiveTab("cards"); }} />}
+          {activeTab === "cards" && <CardsTab cards={sortedCards()} sortBy={sortBy} onOpenCard={(card) => { setSelectedCard(card); markUsed(card.id); }} />}
+          {activeTab === "settings" && <SettingsTab cards={cards} sortBy={sortBy} setSortBy={setSortBy} onDeleteCard={deleteCard} onEditCard={updateCard} />}
           {activeTab === "help" && <HelpTab />}
         </main>
 
         <nav className="bottom-nav">
-          <button className={"nav-button " + (activeTab === "scan" ? "nav-active" : "")} onClick={() => setActiveTab("scan")}>
-            <div className="nav-icon">📷</div><span>Scan</span>
-          </button>
-          <button className={"nav-button " + (activeTab === "cards" ? "nav-active" : "")} onClick={() => setActiveTab("cards")}>
-            <div className="nav-icon">💳</div><span>Pasjes</span>
-          </button>
-          <button className={"nav-button " + (activeTab === "settings" ? "nav-active" : "")} onClick={() => setActiveTab("settings")}>
-            <div className="nav-icon">⚙️</div><span>Instellingen</span>
-          </button>
-          <button className={"nav-button " + (activeTab === "help" ? "nav-active" : "")} onClick={() => setActiveTab("help")}>
-            <div className="nav-icon">❓</div><span>Help</span>
-          </button>
+          <button className={"nav-button " + (activeTab === "scan" ? "nav-active" : "")} onClick={() => setActiveTab("scan")}><div className="nav-icon">📷</div><span>Scan</span></button>
+          <button className={"nav-button " + (activeTab === "cards" ? "nav-active" : "")} onClick={() => setActiveTab("cards")}><div className="nav-icon">💳</div><span>Pasjes</span></button>
+          <button className={"nav-button " + (activeTab === "settings" ? "nav-active" : "")} onClick={() => setActiveTab("settings")}><div className="nav-icon">⚙️</div><span>Instellingen</span></button>
+          <button className={"nav-button " + (activeTab === "help" ? "nav-active" : "")} onClick={() => setActiveTab("help")}><div className="nav-icon">❓</div><span>Help</span></button>
         </nav>
 
-        {selectedCard && (
-          <BarcodeOverlay
-            card={selectedCard}
-            onClose={() => setSelectedCard(null)}
-          />
-        )}
+        {selectedCard && <BarcodeOverlay card={selectedCard} onClose={() => setSelectedCard(null)} />}
       </div>
     );
   }
 
-  /***********************
-   * ScanTab (multi-layer scan + timeout -> details)
-   ***********************/
   function ScanTab({ onSaved }) {
-    const SCAN_TIMEOUT_MS = 7000; // langer (user vroeg 2x), pas aan indien nodig
-    const DETECT_FPS = 8;         // barcode detector loop
-    const OCR_ON_TIMEOUT = true;  // probeer digits te lezen als scan faalt
+    const SCAN_TIMEOUT_MS = 6000;
 
-    const [step, setStep] = useState("scan"); // "scan" | "details"
+    const [step, setStep] = useState("scan"); // scan | details
     const [scanning, setScanning] = useState(false);
+    const [usingQuagga, setUsingQuagga] = useState(false);
     const [error, setError] = useState(null);
-    const [status, setStatus] = useState("");
 
     const [storeName, setStoreName] = useState("");
     const [barcodeValue, setBarcodeValue] = useState("");
@@ -664,280 +572,212 @@
 
     const [cardImageId, setCardImageId] = useState(null);
     const [barcodeImageId, setBarcodeImageId] = useState(null);
-
     const [showTextOnTile, setShowTextOnTile] = useState(true);
-    const [cropRequest, setCropRequest] = useState(null); // {file, aspect, purpose, title}
 
-    const videoRef = useRef(null);
-    const streamRef = useRef(null);
+    const [cropRequest, setCropRequest] = useState(null); // {file, aspect, purpose, title}
     const scanTimerRef = useRef(null);
 
-    // loops
-    const rafRef = useRef(null);
-    const lastDetectRef = useRef(0);
+    const videoRef = useRef(null);
+    const quaggaTargetRef = useRef(null);
+    const codeReaderRef = useRef(null);
+    const streamRef = useRef(null);
 
-    // ZXing
-    const zxingReaderRef = useRef(null);
-
-    // Canvas for frame grabbing
-    const frameCanvasRef = useRef(null);
-
-    useEffect(() => {
-      return () => { stopScan(); };
-    }, []);
+    useEffect(() => () => { stopScan(); }, []);
 
     async function stopScan() {
       if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
       scanTimerRef.current = null;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
 
-      // stop ZXing
-      try { if (zxingReaderRef.current) zxingReaderRef.current.reset(); } catch {}
+      try {
+        if (codeReaderRef.current) {
+          try { codeReaderRef.current.reset(); } catch {}
+        }
+      } catch {}
 
-      // stop stream
+      // Stop Quagga if running
+      try { if (window.Quagga && window.Quagga.stop) window.Quagga.stop(); } catch {}
+
       if (streamRef.current) {
         try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
         streamRef.current = null;
       }
+
+      setUsingQuagga(false);
       setScanning(false);
-      setStatus("");
-    }
-
-    async function ensureCamera() {
-      const constraints = { video: { facingMode: "environment" }, audio: false };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // iOS likes this
-        videoRef.current.setAttribute("playsinline", "true");
-        videoRef.current.muted = true;
-        await videoRef.current.play();
-      }
-      return stream;
-    }
-
-    function openDetails(manual = false) {
-      setStep("details");
-      if (manual && !barcodeFormat) setBarcodeFormat("MANUAL_ENTRY");
     }
 
     async function startScan() {
       setError(null);
       setBarcodeValue("");
       setBarcodeFormat("");
-      setStatus("");
       setStep("scan");
+      setUsingQuagga(false);
 
-      try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          setError("Camera niet beschikbaar in deze browser.");
-          return;
-        }
+      // Ensure scanner libs are present (multi-CDN)
+      const libs = await ensureScannerLibs();
 
-        await ensureCamera();
-        setScanning(true);
-
-        // timeout -> try OCR -> details
-        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-        scanTimerRef.current = setTimeout(async () => {
-          await stopScan();
-
-          if (OCR_ON_TIMEOUT) {
-            try {
-              setStatus("🔎 Probeer cijfers te lezen…");
-              const digits = await tryOcrFromCurrentFrame({ focusBottom: true });
-              if (digits) {
-                setBarcodeValue(digits);
-                setBarcodeFormat("OCR_DIGITS");
-              }
-            } catch (e) {
-              // ignore OCR error
-            }
-          }
-
-          openDetails(true);
-        }, SCAN_TIMEOUT_MS);
-
-        // Start best available scan loop
-        if (isBarcodeDetectorAvailable()) {
-          setStatus("✅ Scanner: BarcodeDetector (native)");
-          startBarcodeDetectorLoop();
-        } else if (window.ZXingBrowser?.BrowserMultiFormatReader) {
-          setStatus("✅ Scanner: ZXing (fallback)");
-          startZXingLoop();
-        } else {
-          setStatus("⚠️ Scanner: niet beschikbaar (fallback naar handmatig)");
-          setError("Scanner libraries ontbreken. Gebruik handmatig of barcodefoto.");
-          await stopScan();
-        }
-      } catch (e) {
-        await stopScan();
-        setError("Kon de camera niet starten. Check permissies (Instellingen → Safari → Camera).");
-      }
-    }
-
-    function startBarcodeDetectorLoop() {
-      const formats = [
-        "ean_13","ean_8","code_128","code_39","itf","upc_a","upc_e","qr_code","pdf417","data_matrix"
-      ];
-      let detector = null;
-      try {
-        detector = new window.BarcodeDetector({ formats });
-      } catch {
-        // some implementations require no formats
-        detector = new window.BarcodeDetector();
-      }
-
-      const loop = async (t) => {
-        rafRef.current = requestAnimationFrame(loop);
-        const now = performance.now();
-        const minInterval = 1000 / DETECT_FPS;
-        if (now - lastDetectRef.current < minInterval) return;
-        lastDetectRef.current = now;
-
-        const video = videoRef.current;
-        if (!video || video.readyState < 2) return;
-
-        const frameCanvas = frameCanvasRef.current || document.createElement("canvas");
-        frameCanvasRef.current = frameCanvas;
-        const ctx = frameCanvas.getContext("2d");
-
-        // draw full frame
-        const w = video.videoWidth;
-        const h = video.videoHeight;
-        if (!w || !h) return;
-        frameCanvas.width = w;
-        frameCanvas.height = h;
-        ctx.drawImage(video, 0, 0, w, h);
-
-        try {
-          const codes = await detector.detect(frameCanvas);
-          if (codes && codes.length) {
-            const raw = codes[0].rawValue || codes[0].rawValue?.toString?.() || codes[0].value || "";
-            const fmt = codes[0].format || "BarcodeDetector";
-            if (raw) onScanSuccess(raw, fmt);
-          }
-        } catch {
-          // ignore per-frame errors
-        }
-      };
-
-      rafRef.current = requestAnimationFrame(loop);
-    }
-
-    function startZXingLoop() {
-      try {
-        zxingReaderRef.current = new window.ZXingBrowser.BrowserMultiFormatReader();
-      } catch (e) {
-        setError("ZXing kon niet starten: " + (e?.message || e));
+      // If neither engine exists, explain clearly.
+      if (!libs.hasZXing && !libs.hasQuagga) {
+        setError("Scanner libraries ontbreken (ZXing/Quagga). Dit is vaak een iOS-cache/CDN issue. Gebruik handmatig of barcodefoto.");
         return;
       }
 
-      const video = videoRef.current;
-      if (!video) return;
+      // Start camera (shared for both engines)
+      let stream = null;
+      try {
+        const constraints = { video: { facingMode: { ideal: "environment" } }, audio: false };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
 
-      // decodeFromVideoElement is simplest; iOS can be finicky but we still try.
-      zxingReaderRef.current.decodeFromVideoElement(video, (result, err) => {
-        if (result) {
-          const text = result.getText ? result.getText() : (result.text || "");
-          const fmt = result.getBarcodeFormat ? String(result.getBarcodeFormat()) : "ZXing";
-          if (text) onScanSuccess(text, fmt);
+        if (videoRef.current) {
+          videoRef.current.setAttribute("playsinline", "true");
+          videoRef.current.muted = true;
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
         }
-      });
-    }
+      } catch (e) {
+        console.error(e);
+        await stopScan();
+        setError("Kon camera niet starten. Check camera-toegang in Safari/Instellingen.");
+        return;
+      }
 
-    async function onScanSuccess(text, fmt) {
+      setScanning(true);
+
+      // Timeout -> manual entry
       if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-      scanTimerRef.current = null;
+      scanTimerRef.current = setTimeout(async () => {
+        await stopScan();
+        setBarcodeFormat("MANUAL_ENTRY");
+        setStep("details");
+      }, SCAN_TIMEOUT_MS);
 
+      // Try ZXing first (when available)
+      if (libs.hasZXing) {
+        try {
+          codeReaderRef.current = new window.ZXingBrowser.BrowserMultiFormatReader();
+          // decodeFromVideoElement is usually fine; if it throws on iOS, we fallback to Quagga.
+          codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, err) => {
+            if (result) {
+              const text = result.getText ? result.getText() : (result.text || "");
+              const fmt = result.getBarcodeFormat ? String(result.getBarcodeFormat()) : "UNKNOWN";
+
+              if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+              scanTimerRef.current = null;
+
+              setBarcodeValue(text || "");
+              setBarcodeFormat(fmt || "UNKNOWN");
+
+              stopScan().then(() => setStep("details"));
+            }
+          });
+          return; // ZXing running
+        } catch (e) {
+          console.warn("ZXing failed, falling back to Quagga:", e);
+          // continue to Quagga fallback if available
+        }
+      }
+
+      // Quagga fallback (often better for 1D barcodes on iOS)
+      if (libs.hasQuagga) {
+        try {
+          setUsingQuagga(true);
+
+          // Quagga wants an element to draw into
+          const target = quaggaTargetRef.current;
+          if (!target) {
+            setError("Quagga target ontbreekt. Herlaad de pagina.");
+            return;
+          }
+
+          // Important for iOS: set numOfWorkers=0
+          // Stop our own stream before Quagga starts its own (iOS can be picky)
+          try {
+            if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; }
+          } catch {}
+          if (streamRef.current) {
+            try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+            streamRef.current = null;
+          }
+
+          window.Quagga.init({
+            inputStream: {
+              type: "LiveStream",
+              target,
+              constraints: {
+                facingMode: "environment"
+              },
+              area: { // focus area, relative
+                top: "25%",
+                right: "10%",
+                left: "10%",
+                bottom: "25%"
+              }
+            },
+            locate: true,
+            numOfWorkers: 0,
+            decoder: {
+              readers: [
+                "ean_reader",
+                "ean_8_reader",
+                "upc_reader",
+                "upc_e_reader",
+                "code_128_reader",
+                "code_39_reader",
+                "code_93_reader",
+                "i2of5_reader"
+              ]
+            }
+          }, (err) => {
+            if (err) {
+              console.error(err);
+              setError("Quagga kon niet starten. Gebruik handmatig of barcodefoto.");
+              return;
+            }
+            window.Quagga.start();
+          });
+
+          window.Quagga.offDetected && window.Quagga.offDetected();
+          window.Quagga.onDetected((data) => {
+            const code = data?.codeResult?.code;
+            const format = data?.codeResult?.format || "UNKNOWN";
+            if (!code) return;
+
+            if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+            scanTimerRef.current = null;
+
+            setBarcodeValue(code);
+            setBarcodeFormat(String(format));
+
+            // Stop Quagga and proceed
+            try { window.Quagga.stop(); } catch {}
+            stopScan().then(() => setStep("details"));
+          });
+
+          return;
+        } catch (e) {
+          console.error(e);
+          await stopScan();
+          setError("Scanner kon niet starten. Gebruik handmatig of barcodefoto.");
+          return;
+        }
+      }
+
+      // If we reach here, nothing worked.
       await stopScan();
-      setBarcodeValue(String(text || "").trim());
-      setBarcodeFormat(fmt || "UNKNOWN");
-      openDetails(false);
+      setError("Scanner startte niet. Gebruik handmatig of barcodefoto.");
     }
 
     function openManual() {
-      stopScan();
       setError(null);
-      setStatus("");
       setBarcodeFormat("MANUAL_ENTRY");
-      openDetails(true);
-    }
-
-    async function tryOcrFromCurrentFrame({ focusBottom }) {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2) return "";
-
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-      if (!w || !h) return "";
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      // crop region: the central scan box area, optionally bias to bottom (digits under bars)
-      const boxW = Math.floor(w * 0.82);
-      const boxH = Math.floor(h * 0.44);
-      const x = Math.floor((w - boxW) / 2);
-      const yCenter = Math.floor((h - boxH) / 2);
-
-      // For digits, take lower part of box
-      const y = focusBottom ? Math.floor(yCenter + boxH * 0.35) : yCenter;
-      const cropH = focusBottom ? Math.floor(boxH * 0.65) : boxH;
-
-      canvas.width = boxW;
-      canvas.height = cropH;
-
-      ctx.drawImage(video, x, y, boxW, cropH, 0, 0, boxW, cropH);
-
-      // Light preprocessing: increase contrast by simple threshold-ish
-      const img = ctx.getImageData(0,0,boxW,cropH);
-      const d = img.data;
-      for (let i=0;i<d.length;i+=4){
-        const r=d[i], g=d[i+1], b=d[i+2];
-        const gray = 0.299*r + 0.587*g + 0.114*b;
-        const v = gray > 160 ? 255 : 0;
-        d[i]=d[i+1]=d[i+2]=v;
-      }
-      ctx.putImageData(img,0,0);
-
-      const digits = await ocrDigitsFromCanvas(canvas);
-      return digits;
-    }
-
-    async function runOcrNow() {
-      setError(null);
-      setStatus("🔎 Probeer cijfers te lezen…");
-      try {
-        // If not scanning, start camera first
-        if (!scanning) {
-          await ensureCamera();
-          setScanning(true);
-        }
-        const digits = await tryOcrFromCurrentFrame({ focusBottom: true });
-        if (digits) {
-          await stopScan();
-          setBarcodeValue(digits);
-          setBarcodeFormat("OCR_DIGITS");
-          openDetails(false);
-        } else {
-          setStatus("Geen duidelijke cijfers gevonden — vul handmatig in of maak barcodefoto.");
-        }
-      } catch (e) {
-        setError("OCR mislukte: " + (e?.message || e));
-      }
+      setStep("details");
     }
 
     async function handleSave() {
       setError(null);
       if (!storeName.trim()) { setError("Vul een winkelnaam in."); return; }
-      if (!barcodeValue.trim() && !barcodeImageId) {
-        setError("Vul een barcode-nummer in óf voeg een barcodefoto toe.");
-        return;
-      }
+      if (!barcodeValue.trim() && !barcodeImageId) { setError("Vul een barcode-nummer in óf voeg een barcodefoto toe."); return; }
 
       const card = {
         id: Date.now().toString(),
@@ -954,7 +794,6 @@
 
       onSaved(card);
 
-      // reset
       setStoreName("");
       setBarcodeValue("");
       setBarcodeFormat("");
@@ -984,11 +823,14 @@
             <div className="field-label">Barcode scannen (camera)</div>
 
             <div className="scan-view-container">
-              <video ref={videoRef} className="scan-video" playsInline muted></video>
-              <div className="scan-guides">
-                <div className="scan-guides-box"></div>
-                <div className="scan-guides-text">Plaats de barcode in het vak — houd stil</div>
-              </div>
+              <video ref={videoRef} className="scan-video" playsInline muted style={{ display: usingQuagga ? "none" : "block" }}></video>
+              <div ref={quaggaTargetRef} style={{ position: "absolute", inset: 0, display: usingQuagga ? "block" : "none" }}></div>
+              {scanning && (
+                <div className="scan-guides">
+                  <div className="scan-guides-box"></div>
+                  <div className="scan-guides-text">Plaats de barcode in het vak — houd stil</div>
+                </div>
+              )}
             </div>
 
             <div className="button-row">
@@ -998,23 +840,9 @@
                 <button className="button-secondary" onClick={stopScan}>✋ Stop</button>
               )}
               <button className="button-secondary" onClick={openManual}>✍️ Handmatig</button>
-              <button className="button-secondary" onClick={runOcrNow}>🔎 Lees cijfers</button>
             </div>
-
-            {(status || isBarcodeDetectorAvailable()) && (
-              <div className="scan-status">
-                <div className="pill">
-                  {isBarcodeDetectorAvailable() ? "BarcodeDetector" : "WebKit"}
-                </div>
-                <div style={{fontSize: 11, color: "#4a5568"}}>{status}</div>
-              </div>
-            )}
 
             {error && <div className="error-box">{error}</div>}
-
-            <div className="helper">
-              Tip: als scannen lastig is (reflectie/contrast), gebruik <strong>Lees cijfers</strong> of voeg een <strong>barcodefoto</strong> toe.
-            </div>
           </div>
         )}
 
@@ -1023,76 +851,50 @@
             <div className="fullscreen-inner">
               <div className="fullscreen-card">
                 <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>
-                  {barcodeValue ? "Gevonden!" : "Handmatig toevoegen"}
+                  {barcodeValue ? "Scannen gelukt!" : "Handmatig toevoegen"}
                 </div>
 
                 <div className="success-box" style={{ textAlign: "left" }}>
                   {barcodeValue ? (
                     <div>
-                      Code: <strong>{barcodeValue}</strong>
-                      <div style={{ fontSize: 11, marginTop: 4, color: "#22543d" }}>
-                        Bron: {barcodeFormat || "onbekend"} — je kunt dit hieronder aanpassen.
-                      </div>
+                      Gelezen code: <strong>{barcodeValue}</strong>
+                      <div style={{ fontSize: 11, marginTop: 4, color: "#22543d" }}>Je kunt de code hieronder nog aanpassen.</div>
                     </div>
                   ) : (
-                    <div>Vul de gegevens in. Je kunt ook een barcodefoto opslaan als fallback.</div>
+                    <div>Vul de gegevens in. Je kunt óók een barcodefoto opslaan als fallback.</div>
                   )}
                 </div>
 
                 <div style={{ marginBottom: 12, textAlign: "left" }}>
                   <div className="field-label">Barcode-nummer (optioneel als je barcodefoto toevoegt)</div>
-                  <input
-                    className="input"
-                    value={barcodeValue}
-                    onChange={e => setBarcodeValue(e.target.value)}
-                    placeholder="Bijv. 2620630013850"
-                    inputMode="numeric"
-                  />
-                  <div className="helper">Je kunt ook alleen een barcodefoto gebruiken.</div>
+                  <input className="input" value={barcodeValue} onChange={e => setBarcodeValue(e.target.value)} placeholder="Bijv. 2620630013850" />
+                  <div className="helper">Tip: als je geen cijfers hebt, voeg dan een barcodefoto toe.</div>
                 </div>
 
                 <div style={{ marginBottom: 12, textAlign: "left" }}>
                   <div className="field-label">Naam van de winkel</div>
-                  <input
-                    className="input"
-                    value={storeName}
-                    onChange={e => setStoreName(e.target.value)}
-                    placeholder="Bijv. Albert Heijn, HEMA, Etos…"
-                  />
+                  <input className="input" value={storeName} onChange={e => setStoreName(e.target.value)} placeholder="Bijv. Albert Heijn, HEMA, Etos…" />
                 </div>
 
                 <div style={{ textAlign: "left" }}>
                   <div className="field-label">Afbeeldingen (optioneel)</div>
-
                   <div className="button-row">
                     <label className="button-secondary" style={{ cursor: "pointer" }}>
                       🖼️ Kaartfoto toevoegen
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (!f) return;
-                          setCropRequest({ file: f, aspect: 1, purpose: "card", title: "Kaartfoto uitsnijden (vierkant)" });
-                          e.target.value = "";
-                        }}
-                      />
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        setCropRequest({ file: f, aspect: 1, purpose: "card", title: "Kaartfoto uitsnijden (vierkant)" });
+                        e.target.value = "";
+                      }} />
                     </label>
 
                     <label className="button-secondary" style={{ cursor: "pointer" }}>
                       📸 Barcodefoto toevoegen
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (!f) return;
-                          setCropRequest({ file: f, aspect: 4, purpose: "barcode", title: "Barcode uitsnijden (breed)" });
-                          e.target.value = "";
-                        }}
-                      />
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        setCropRequest({ file: f, aspect: 4, purpose: "barcode", title: "Barcode uitsnijden (breed)" });
+                        e.target.value = "";
+                      }} />
                     </label>
                   </div>
 
@@ -1100,10 +902,7 @@
                     <label>Toon tekst op tegel</label>
                     <input type="checkbox" checked={showTextOnTile} onChange={(e) => setShowTextOnTile(e.target.checked)} />
                   </div>
-
-                  <div className="helper">
-                    Als je kaartfoto voldoende is, kun je tekst op de tegel uitzetten voor een rustiger scherm.
-                  </div>
+                  <div className="helper">Als je kaartfoto goed is, kun je tekst op de tegel uitzetten voor een rustiger scherm.</div>
                 </div>
 
                 {error && <div className="error-box">{error}</div>}
@@ -1120,11 +919,7 @@
             </div>
 
             {cropRequest && (
-              <CropperModal
-                request={cropRequest}
-                onCancel={() => setCropRequest(null)}
-                onDone={onCropDone}
-              />
+              <CropperModal request={cropRequest} onCancel={() => setCropRequest(null)} onDone={onCropDone} />
             )}
           </div>
         )}
@@ -1132,24 +927,22 @@
     );
   }
 
-  /***********************
-   * CropperModal (fixed: much more zoom-out + contain start)
-   ***********************/
   function CropperModal({ request, onCancel, onDone }) {
     const { file, aspect, purpose, title } = request;
+
     const [imgUrl, setImgUrl] = useState(null);
     const imgRef = useRef(null);
     const stageRef = useRef(null);
 
+    // transform state
     const [scale, setScale] = useState(1);
     const [pos, setPos] = useState({ x: 0, y: 0 });
-    const [baseScale, setBaseScale] = useState(1);
 
-    const MIN_SCALE = 0.15;
-    const MAX_SCALE = 8;
-
+    // pointer gesture
     const pointers = useRef(new Map());
     const lastPinch = useRef(null);
+
+    const holeDims = useMemo(() => ({ wPct: 0.82, aspect }), [aspect]);
 
     useEffect(() => {
       const url = URL.createObjectURL(file);
@@ -1157,44 +950,20 @@
       return () => URL.revokeObjectURL(url);
     }, [file]);
 
-    // compute contain baseScale after image loads
     useEffect(() => {
-      const img = imgRef.current;
-      const stage = stageRef.current;
-      if (!img || !stage) return;
-
-      const handle = () => {
-        const rect = stage.getBoundingClientRect();
-        const nw = img.naturalWidth || 1;
-        const nh = img.naturalHeight || 1;
-
-        // hole area size (as stage %)
-        const holeW = rect.width * 0.82;
-        const holeH = holeW / aspect;
-        // contain: make whole photo visible initially, but at least fill hole on one dimension a bit
-        const contain = Math.min(rect.width / nw, rect.height / nh); // <<< key change (contain)
-        // also ensure the image is not tiny vs hole: aim to cover hole lightly
-        const coverHole = Math.max(holeW / nw, holeH / nh);
-        const bs = Math.min(Math.max(contain, coverHole * 0.55), 2.5);
-
-        setBaseScale(bs);
-        setScale(1);
-        setPos({ x: 0, y: 0 });
-      };
-
-      if (img.complete) handle();
-      else img.onload = handle;
-
-      return () => { if (img) img.onload = null; };
-    }, [imgUrl, aspect]);
+      // reset on new image
+      setScale(1);
+      setPos({ x: 0, y: 0 });
+      pointers.current.clear();
+      lastPinch.current = null;
+    }, [imgUrl]);
 
     function onPointerDown(e) {
       e.preventDefault();
-      stageRef.current?.setPointerCapture?.(e.pointerId);
+      e.currentTarget.setPointerCapture?.(e.pointerId);
       pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       lastPinch.current = null;
     }
-
     function onPointerMove(e) {
       if (!pointers.current.has(e.pointerId)) return;
       const prev = pointers.current.get(e.pointerId);
@@ -1208,30 +977,26 @@
       } else if (pts.length >= 2) {
         const [a, b] = pts;
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
-        if (!lastPinch.current) {
-          lastPinch.current = { dist };
-          return;
-        }
+        if (!lastPinch.current) { lastPinch.current = { dist }; return; }
         const ratio = dist / (lastPinch.current.dist || dist);
-        setScale(s => clamp(s * ratio, MIN_SCALE, MAX_SCALE));
+        setScale(s => clamp(s * ratio, 0.2, 6)); // allow further zoom-out
         lastPinch.current = { dist };
       }
     }
-
     function onPointerUp(e) {
       pointers.current.delete(e.pointerId);
       if (pointers.current.size < 2) lastPinch.current = null;
     }
-
     function onWheel(e) {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.06 : 0.94;
-      setScale(s => clamp(s * factor, MIN_SCALE, MAX_SCALE));
+      setScale(s => clamp(s * factor, 0.2, 6));
     }
 
-    function zoomOut() { setScale(s => clamp(s / 1.2, MIN_SCALE, MAX_SCALE)); }
-    function zoomIn()  { setScale(s => clamp(s * 1.2, MIN_SCALE, MAX_SCALE)); }
-    function reset()   { setScale(1); setPos({x:0,y:0}); }
+    function resetFit() {
+      setScale(1);
+      setPos({ x: 0, y: 0 });
+    }
 
     async function exportCrop() {
       const imgEl = imgRef.current;
@@ -1240,13 +1005,14 @@
 
       const stageRect = stageEl.getBoundingClientRect();
 
-      const holeW = stageRect.width * 0.82;
+      // Hole in stage pixels
+      const holeW = stageRect.width * holeDims.wPct;
       const holeH = holeW / aspect;
       const holeX = (stageRect.width - holeW) / 2;
       const holeY = (stageRect.height - holeH) / 2;
 
-      // output size
-      const outW = purpose === "barcode" ? 1200 : 768;
+      // Output size
+      const outW = purpose === "barcode" ? 1024 : 768;
       const outH = Math.round(outW / aspect);
 
       const canvas = document.createElement("canvas");
@@ -1257,24 +1023,27 @@
       const naturalW = imgEl.naturalWidth;
       const naturalH = imgEl.naturalHeight;
 
-      // render on stage: baseScale * scale
+      // CHANGE: start from "contain" (min), so you can zoom OUT enough to include full image
+      const baseScale = Math.min(stageRect.width / naturalW, stageRect.height / naturalH);
       const renderScale = baseScale * scale;
       const renderW = naturalW * renderScale;
       const renderH = naturalH * renderScale;
 
       const centerX = stageRect.width / 2 + pos.x;
       const centerY = stageRect.height / 2 + pos.y;
-      const imgLeft = centerX - renderW / 2;
-      const imgTop  = centerY - renderH / 2;
 
-      // stage->image coords
+      const imgLeft = centerX - renderW / 2;
+      const imgTop = centerY - renderH / 2;
+
+      // Map hole back to source image coords
       const sx = (holeX - imgLeft) / renderScale;
-      const sy = (holeY - imgTop)  / renderScale;
-      const sWidth  = holeW / renderScale;
+      const sy = (holeY - imgTop) / renderScale;
+      const sWidth = holeW / renderScale;
       const sHeight = holeH / renderScale;
 
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0,0,outW,outH);
+      ctx.fillRect(0, 0, outW, outH);
+
       ctx.drawImage(imgEl, sx, sy, sWidth, sHeight, 0, 0, outW, outH);
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
@@ -1302,8 +1071,8 @@
                   ref={imgRef}
                   src={imgUrl}
                   alt="crop"
+                  style={{ transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${scale})` }}
                   draggable={false}
-                  style={{ transform: `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${baseScale * scale})` }}
                 />
               )}
 
@@ -1311,24 +1080,21 @@
                 <div
                   className="crop-hole"
                   style={{
-                    width: `${82}%`,
-                    height: `${(0.82 / aspect) * 100}%`
+                    width: `${holeDims.wPct * 100}%`,
+                    height: `${(holeDims.wPct / aspect) * 100}%`
                   }}
                 ></div>
               </div>
             </div>
 
             <div className="crop-controls">
-              <div className="pill">Zoomen: pinch / knoppen</div>
-              <div style={{display:"flex", gap:8}}>
-                <button className="button-secondary" onClick={zoomOut}>➖</button>
-                <button className="button-secondary" onClick={reset}>🔄 Reset</button>
-                <button className="button-secondary" onClick={zoomIn}>➕</button>
-              </div>
+              <button className="button-secondary" onClick={() => setScale(s => clamp(s * 0.85, 0.2, 6))}>➖ Zoom uit</button>
+              <button className="button-secondary" onClick={resetFit}>↺ Reset</button>
+              <button className="button-secondary" onClick={() => setScale(s => clamp(s * 1.18, 0.2, 6))}>➕ Zoom in</button>
             </div>
 
             <div className="helper" style={{ marginTop: 10 }}>
-              Sleep om te positioneren. Je kunt nu veel verder uitzoomen.
+              Sleep om te positioneren. Pinch/zoom om in/uit te zoomen. (Je kunt nu verder uitzoomen dan eerder.)
             </div>
 
             <div className="button-row" style={{ justifyContent: "flex-end" }}>
@@ -1341,9 +1107,6 @@
     );
   }
 
-  /***********************
-   * CardsTab
-   ***********************/
   function CardsTab({ cards, sortBy, onOpenCard }) {
     const [search, setSearch] = useState("");
     const filtered = cards.filter(c => (c.storeName || "").toLowerCase().includes(search.toLowerCase()));
@@ -1358,15 +1121,10 @@
         </div>
 
         {filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">💳</div>
-            <div>Nog geen pasjes. Voeg er één toe via <strong>Scan</strong>.</div>
-          </div>
+          <div className="empty-state"><div className="empty-icon">💳</div><div>Nog geen pasjes. Voeg er één toe via <strong>Scan</strong>.</div></div>
         ) : (
           <div className="card-grid">
-            {filtered.map(card => (
-              <CardTile key={card.id} card={card} sortBy={sortBy} onClick={() => onOpenCard(card)} />
-            ))}
+            {filtered.map(card => <CardTile key={card.id} card={card} sortBy={sortBy} onClick={() => onOpenCard(card)} />)}
           </div>
         )}
       </div>
@@ -1389,10 +1147,7 @@
           setImgUrl(null);
         }
       })();
-      return () => {
-        cancelled = true;
-        if (url) URL.revokeObjectURL(url);
-      };
+      return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
     }, [card.cardImageId]);
 
     const showText = card.showTextOnTile !== false;
@@ -1425,17 +1180,11 @@
     );
   }
 
-  /***********************
-   * SettingsTab (edit supports adding images after the fact)
-   ***********************/
   function SettingsTab({ cards, sortBy, setSortBy, onDeleteCard, onEditCard }) {
     const [editingCard, setEditingCard] = useState(null);
     const [editName, setEditName] = useState("");
     const [editCode, setEditCode] = useState("");
     const [editShowText, setEditShowText] = useState(true);
-
-    const [cropRequest, setCropRequest] = useState(null); // used for edit too
-    const pendingPurposeRef = useRef(null);
 
     function openEdit(card) {
       setEditingCard(card);
@@ -1443,21 +1192,10 @@
       setEditCode(card.barcodeValue || "");
       setEditShowText(card.showTextOnTile !== false);
     }
-
-    function closeEdit() {
-      setEditingCard(null);
-      setCropRequest(null);
-      pendingPurposeRef.current = null;
-    }
-
-    async function saveEdit() {
+    function saveEdit() {
       if (!editingCard) return;
-      await onEditCard(editingCard.id, {
-        storeName: editName.trim() || editingCard.storeName,
-        barcodeValue: editCode.trim(),
-        showTextOnTile: !!editShowText
-      });
-      closeEdit();
+      onEditCard(editingCard.id, { storeName: editName.trim() || editingCard.storeName, barcodeValue: editCode.trim(), showTextOnTile: !!editShowText });
+      setEditingCard(null);
     }
 
     function exportData() {
@@ -1478,45 +1216,13 @@
       reader.onload = e => {
         try {
           const data = JSON.parse(e.target.result);
-          if (!data.cards || !Array.isArray(data.cards)) {
-            alert("Ongeldig bestand.");
-            return;
-          }
+          if (!data.cards || !Array.isArray(data.cards)) { alert("Ongeldig bestand."); return; }
           saveStorage("pashie_cards", data.cards);
           saveStorage("pashie_sort", data.sortBy || "alphabetical");
           location.reload();
-        } catch {
-          alert("Kon het bestand niet lezen.");
-        }
+        } catch { alert("Kon het bestand niet lezen."); }
       };
       reader.readAsText(file);
-    }
-
-    async function onCropDone({ purpose, blob }) {
-      if (!editingCard) return;
-      const newId = await idbPutImage(blob);
-      if (purpose === "card") {
-        await onEditCard(editingCard.id, { cardImageId: newId });
-      } else if (purpose === "barcode") {
-        await onEditCard(editingCard.id, { barcodeImageId: newId });
-      }
-      setCropRequest(null);
-    }
-
-    async function removeImage(which) {
-      if (!editingCard) return;
-      if (which === "card") {
-        await onEditCard(editingCard.id, { cardImageId: null });
-      } else {
-        await onEditCard(editingCard.id, { barcodeImageId: null });
-      }
-      // Note: old image is deleted in onEditCard (App.updateCard) when replaced; for null we delete explicitly here
-      // We'll delete explicitly now:
-      try {
-        if (which === "card" && editingCard.cardImageId) await idbDeleteImage(editingCard.cardImageId);
-        if (which === "barcode" && editingCard.barcodeImageId) await idbDeleteImage(editingCard.barcodeImageId);
-      } catch {}
-      // Update local edit modal state with fresh card object on next render from parent
     }
 
     return (
@@ -1542,7 +1248,7 @@
               <input type="file" accept="application/json" style={{ display: "none" }} onChange={importData} />
             </label>
           </div>
-          <div className="helper">Let op: foto’s staan in IndexedDB en gaan nog niet mee in de JSON-export.</div>
+          <div className="helper">Let op: foto’s zitten in IndexedDB en gaan niet mee in de JSON-export (kan later als we willen).</div>
         </div>
 
         <div className="scan-box" style={{ borderStyle: "solid" }}>
@@ -1551,28 +1257,15 @@
             <div className="helper">Nog geen pasjes opgeslagen.</div>
           ) : (
             <div style={{ maxHeight: 320, overflowY: "auto" }}>
-              {cards
-                .slice()
-                .sort((a,b) => (a.storeName||"").localeCompare(b.storeName||""))
-                .map(card => (
-                  <div key={card.id}
-                       style={{
-                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                         padding: "8px 0", borderBottom: "1px solid #e2e8f0", fontSize: 13
-                       }}>
-                    <div style={{ fontWeight: 800 }}>{card.storeName}</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className="button-secondary" style={{ padding: "8px 12px", fontSize: 12 }} onClick={() => openEdit(card)}>
-                        ✏️ Bewerken
-                      </button>
-                      <button className="button-danger" style={{ padding: "8px 12px", fontSize: 12 }} onClick={() => {
-                        if (confirm(`Pasje voor "${card.storeName}" verwijderen? (ook foto’s worden verwijderd)`)) onDeleteCard(card.id);
-                      }}>
-                        Verwijder
-                      </button>
-                    </div>
+              {cards.slice().sort((a,b) => (a.storeName||"").localeCompare(b.storeName||"")).map(card => (
+                <div key={card.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #e2e8f0", fontSize: 13 }}>
+                  <div style={{ fontWeight: 800 }}>{card.storeName}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="button-secondary" style={{ padding: "8px 12px", fontSize: 12 }} onClick={() => openEdit(card)}>✏️ Bewerken</button>
+                    <button className="button-danger" style={{ padding: "8px 12px", fontSize: 12 }} onClick={() => { if (confirm(`Pasje voor "${card.storeName}" verwijderen? (ook foto’s worden verwijderd)`)) onDeleteCard(card.id); }}>Verwijder</button>
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1580,18 +1273,17 @@
         {editingCard && (
           <div className="fullscreen-overlay">
             <div className="fullscreen-inner">
-              <div className="fullscreen-card" style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10, textAlign:"center" }}>Pasje bewerken</div>
+              <div className="fullscreen-card">
+                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>Pasje bewerken</div>
 
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
                   <div className="field-label">Winkelnaam</div>
                   <input className="input" value={editName} onChange={e => setEditName(e.target.value)} />
                 </div>
 
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 12, textAlign: "left" }}>
                   <div className="field-label">Barcode-nummer</div>
-                  <input className="input" value={editCode} onChange={e => setEditCode(e.target.value)} inputMode="numeric" />
-                  <div className="helper">Geen nummer? Voeg een barcodefoto toe.</div>
+                  <input className="input" value={editCode} onChange={e => setEditCode(e.target.value)} />
                 </div>
 
                 <div className="toggle-row" style={{ marginTop: 0 }}>
@@ -1599,101 +1291,55 @@
                   <input type="checkbox" checked={editShowText} onChange={(e) => setEditShowText(e.target.checked)} />
                 </div>
 
-                <div style={{ marginTop: 12 }}>
-                  <div className="field-label">Foto’s</div>
-                  <div className="button-row">
-                    <label className="button-secondary" style={{ cursor: "pointer" }}>
-                      🖼️ Kaartfoto
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (!f) return;
-                          setCropRequest({ file: f, aspect: 1, purpose: "card", title: "Kaartfoto uitsnijden (vierkant)" });
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-
-                    <label className="button-secondary" style={{ cursor: "pointer" }}>
-                      📸 Barcodefoto
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (!f) return;
-                          setCropRequest({ file: f, aspect: 4, purpose: "barcode", title: "Barcode uitsnijden (breed)" });
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-
-                    <button className="button-secondary" onClick={() => removeImage("card")}>🗑️ Kaartfoto weg</button>
-                    <button className="button-secondary" onClick={() => removeImage("barcode")}>🗑️ Barcodefoto weg</button>
-                  </div>
-                  <div className="helper">Je kunt nu ook bij bestaande pasjes foto’s toevoegen of vervangen.</div>
+                <div className="button-row" style={{ justifyContent: "flex-end" }}>
+                  <button className="button-secondary" onClick={() => setEditingCard(null)}>Annuleer</button>
+                  <button className="button-primary" onClick={saveEdit}>💾 Opslaan</button>
                 </div>
 
-                <div className="button-row" style={{ justifyContent: "flex-end" }}>
-                  <button className="button-secondary" onClick={closeEdit}>Annuleer</button>
-                  <button className="button-primary" onClick={saveEdit}>💾 Opslaan</button>
+                <div className="helper">
+                  Handleiding is bijgewerkt. (Volgende stap kan zijn: ook kaartfoto/barcodefoto kunnen wijzigen bij “Bewerken”.)
                 </div>
               </div>
             </div>
-
-            {cropRequest && (
-              <CropperModal
-                request={cropRequest}
-                onCancel={() => setCropRequest(null)}
-                onDone={onCropDone}
-              />
-            )}
           </div>
         )}
       </div>
     );
   }
 
-  /***********************
-   * HelpTab (updated for new features)
-   ***********************/
   function HelpTab() {
     return (
       <div>
         <h2 className="section-title">Handleiding</h2>
-        <p className="section-text">Scannen, foto’s toevoegen en installeren als PWA.</p>
+        <p className="section-text">Scannen, toevoegen, foto’s en installeren als PWA.</p>
 
         <div className="scan-box" style={{ borderStyle: "solid" }}>
           <div className="field-label">Pasje toevoegen</div>
           <div className="helper">
-            Ga naar <strong>Scan</strong> → <strong>Start scannen</strong>. Als er niets wordt gevonden, ga je automatisch naar handmatige invoer.
-            Je kunt ook <strong>Lees cijfers</strong> gebruiken (OCR) of een <strong>barcodefoto</strong> toevoegen.
+            Ga naar <strong>Scan</strong> → <strong>Start scannen</strong>. Plaats de barcode in het witte vak.
+            Als er binnen enkele seconden niets wordt gevonden, ga je automatisch door naar handmatige invoer.
           </div>
         </div>
 
         <div className="scan-box" style={{ borderStyle: "solid" }}>
-          <div className="field-label">Foto’s (kaart / barcode)</div>
+          <div className="field-label">Kaartfoto toevoegen (eigen afbeelding)</div>
           <div className="helper">
-            Je kunt een <strong>kaartfoto</strong> opslaan (tegel wordt dan visueel herkenbaar) en/of een <strong>barcodefoto</strong> als fallback
-            (handig bij pasjes zonder cijferreeks). In de cropper kun je slepen en ver in/uit zoomen.
+            In het “Opslaan”-scherm kun je een <strong>kaartfoto</strong> uploaden en uitsnijden (vierkant). Je kunt verder uitzoomen om meer van de foto te pakken.
+            Zet eventueel <strong>Toon tekst op tegel</strong> uit als de foto genoeg herkenning geeft.
           </div>
         </div>
 
         <div className="scan-box" style={{ borderStyle: "solid" }}>
-          <div className="field-label">Tekst op tegels</div>
+          <div className="field-label">Barcodefoto (fallback)</div>
           <div className="helper">
-            Per pasje kun je kiezen of de tekst op de tegel zichtbaar is. Als je kaartfoto genoeg is, zet je dit uit voor een rustig overzicht.
+            Heeft jouw kaart geen leesbare cijferreeks? Voeg dan een <strong>barcodefoto</strong> toe. Bij openen van het pasje tonen we die fullscreen als fallback.
           </div>
         </div>
 
         <div className="scan-box" style={{ borderStyle: "solid" }}>
-          <div className="field-label">Bestaande pasjes aanpassen</div>
+          <div className="field-label">Pasje gebruiken</div>
           <div className="helper">
-            Ga naar <strong>Instellingen</strong> → <strong>Pasjes beheren</strong> → <strong>Bewerken</strong>. Daar kun je naam, barcode en foto’s wijzigen of toevoegen.
+            Ga naar <strong>Pasjes</strong>, tik op een pasje. Je krijgt de barcode fullscreen. Tip: zet je schermhelderheid hoog bij de kassa.
           </div>
         </div>
 
@@ -1708,16 +1354,14 @@
         <div className="scan-box" style={{ borderStyle: "solid" }}>
           <div className="field-label">Back-up</div>
           <div className="helper">
-            De JSON-export bevat pasjesdata, maar nog niet de foto’s uit IndexedDB. (Kan later toegevoegd worden.)
+            Export/Import bewaart de pasjeslijst. Foto’s staan in <strong>IndexedDB</strong> en gaan nog niet mee in JSON-export.
+            (Dat kunnen we later toevoegen.)
           </div>
         </div>
       </div>
     );
   }
 
-  /***********************
-   * BarcodeOverlay
-   ***********************/
   function BarcodeOverlay({ card, onClose }) {
     const svgRef = useRef(null);
     const [barcodeImgUrl, setBarcodeImgUrl] = useState(null);
@@ -1735,10 +1379,7 @@
           setBarcodeImgUrl(null);
         }
       })();
-      return () => {
-        cancelled = true;
-        if (url) URL.revokeObjectURL(url);
-      };
+      return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
     }, [card.barcodeImageId]);
 
     useEffect(() => {
@@ -1749,15 +1390,8 @@
 
       if (typeof JsBarcode === "function") {
         try {
-          JsBarcode(el, card.barcodeValue, {
-            format: "CODE128",
-            width: 2,
-            height: 100,
-            displayValue: true,
-            margin: 10,
-            fontSize: 18
-          });
-        } catch {}
+          JsBarcode(el, card.barcodeValue, { format: "CODE128", width: 2, height: 100, displayValue: true, margin: 10, fontSize: 18 });
+        } catch (e) { console.error(e); }
       }
     }, [card.barcodeValue]);
 
@@ -1782,31 +1416,15 @@
             ) : barcodeImgUrl ? (
               <>
                 <div style={{ fontSize: 12, color: "#4a5568", marginBottom: 8 }}>Barcodefoto (fallback)</div>
-                <img
-                  src={barcodeImgUrl}
-                  alt="barcode foto"
-                  style={{
-                    width: "100%",
-                    height: "160px",
-                    objectFit: "contain",
-                    background: "#fff",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
-                    padding: "8px"
-                  }}
-                />
-                <div className="helper" style={{ marginTop: 8 }}>
-                  Tip: zet je schermhelderheid hoog voor betere leesbaarheid.
-                </div>
+                <img src={barcodeImgUrl} alt="barcode foto" style={{ width: "100%", height: "160px", objectFit: "contain", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "8px" }} />
+                <div className="helper" style={{ marginTop: 8 }}>Tip: zet je schermhelderheid hoog voor betere leesbaarheid.</div>
               </>
             ) : (
               <div className="error-box">Geen barcode-nummer en geen barcodefoto opgeslagen.</div>
             )}
           </div>
 
-          <div style={{ marginTop: 10, fontSize: 11, color: "#e2e8f0" }}>
-            Tip: houd je telefoon stabiel onder de scanner.
-          </div>
+          <div style={{ marginTop: 10, fontSize: 11, color: "#e2e8f0" }}>Tip: houd je telefoon stabiel onder de scanner.</div>
         </div>
       </div>
     );
