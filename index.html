@@ -17,7 +17,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <!-- ZXing (scanner) -->
-  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 
   <!-- JsBarcode (generate barcode) -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -201,6 +202,8 @@
       overflow: hidden;
       background: #000;
       border: 1px solid #111;
+      height: 280px;
+      min-height: 280px;
     }
     video.scan-video {
       width: 100%;
@@ -387,6 +390,49 @@
 <script type="text/babel">
   const { useEffect, useMemo, useRef, useState } = React;
 
+  // --- Script loader (fallback for iOS/CDN quirks) ---
+  const __loadedScripts = new Set();
+  function loadScriptOnce(url) {
+    return new Promise((resolve, reject) => {
+      if (__loadedScripts.has(url)) return resolve(true);
+      const s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = () => { __loadedScripts.add(url); resolve(true); };
+      s.onerror = () => reject(new Error('Failed to load ' + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureScannerLibs() {
+    // ZXing (try multiple CDNs)
+    if (!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader)) {
+      const zxingUrls = [
+        "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js",
+        "https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"
+      ];
+      for (const u of zxingUrls) {
+        try { await loadScriptOnce(u); } catch {}
+        if (window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader) break;
+      }
+    }
+    // Quagga2 (try multiple CDNs)
+    if (!(window.Quagga && window.Quagga.init)) {
+      const quaggaUrls = [
+        "https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js",
+        "https://unpkg.com/@ericblade/quagga2@1.8.4/dist/quagga.min.js"
+      ];
+      for (const u of quaggaUrls) {
+        try { await loadScriptOnce(u); } catch {}
+        if (window.Quagga && window.Quagga.init) break;
+      }
+    }
+    return {
+      hasZXing: !!(window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader),
+      hasQuagga: !!(window.Quagga && window.Quagga.init)
+    };
+  }
+
   function loadStorage(key, fallback) {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
   }
@@ -519,6 +565,7 @@
 
     const [step, setStep] = useState("scan"); // scan | details
     const [scanning, setScanning] = useState(false);
+    const [usingQuagga, setUsingQuagga] = useState(false);
     const [error, setError] = useState(null);
 
     const [storeName, setStoreName] = useState("");
@@ -533,6 +580,7 @@
     const scanTimerRef = useRef(null);
 
     const videoRef = useRef(null);
+    const quaggaTargetRef = useRef(null);
     const codeReaderRef = useRef(null);
     const streamRef = useRef(null);
 
@@ -548,11 +596,15 @@
         }
       } catch {}
 
+      // Stop Quagga if running
+      try { if (window.Quagga && window.Quagga.stop) window.Quagga.stop(); } catch {}
+
       if (streamRef.current) {
         try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
         streamRef.current = null;
       }
 
+      setUsingQuagga(false);
       setScanning(false);
     }
 
@@ -561,41 +613,53 @@
       setBarcodeValue("");
       setBarcodeFormat("");
       setStep("scan");
+      setUsingQuagga(false);
 
-      if (!window.ZXingBrowser || !window.ZXingBrowser.BrowserMultiFormatReader) {
-        setError("Scanner kon niet laden (ZXing). Gebruik handmatig toevoegen.");
+      // Ensure scanner libs are present (multi-CDN)
+      const libs = await ensureScannerLibs();
+
+      // If neither engine exists, explain clearly.
+      if (!libs.hasZXing && !libs.hasQuagga) {
+        setError("Scanner libraries ontbreken (ZXing/Quagga). Dit is vaak een iOS-cache/CDN issue. Gebruik handmatig of barcodefoto.");
         return;
       }
 
+      // Start camera (shared for both engines)
+      let stream = null;
       try {
-        codeReaderRef.current = new window.ZXingBrowser.BrowserMultiFormatReader();
-
         const constraints = { video: { facingMode: { ideal: "environment" } }, audio: false };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
 
         if (videoRef.current) {
-          // iOS Safari: playsinline is critical
           videoRef.current.setAttribute("playsinline", "true");
           videoRef.current.muted = true;
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
+      } catch (e) {
+        console.error(e);
+        await stopScan();
+        setError("Kon camera niet starten. Check camera-toegang in Safari/Instellingen.");
+        return;
+      }
 
-        setScanning(true);
+      setScanning(true);
 
-        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-        scanTimerRef.current = setTimeout(async () => {
-          await stopScan();
-          setBarcodeFormat("MANUAL_ENTRY");
-          setStep("details");
-        }, SCAN_TIMEOUT_MS);
+      // Timeout -> manual entry
+      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = setTimeout(async () => {
+        await stopScan();
+        setBarcodeFormat("MANUAL_ENTRY");
+        setStep("details");
+      }, SCAN_TIMEOUT_MS);
 
-        // IMPORTANT: use decodeFromConstraints (more iPhone-friendly than decodeFromVideoElement in some cases)
-        codeReaderRef.current.decodeFromConstraints(
-          constraints,
-          videoRef.current,
-          (result, err) => {
+      // Try ZXing first (when available)
+      if (libs.hasZXing) {
+        try {
+          codeReaderRef.current = new window.ZXingBrowser.BrowserMultiFormatReader();
+          // decodeFromVideoElement is usually fine; if it throws on iOS, we fallback to Quagga.
+          codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, err) => {
             if (result) {
               const text = result.getText ? result.getText() : (result.text || "");
               const fmt = result.getBarcodeFormat ? String(result.getBarcodeFormat()) : "UNKNOWN";
@@ -608,14 +672,102 @@
 
               stopScan().then(() => setStep("details"));
             }
-          }
-        );
-      } catch (e) {
-        console.error(e);
-        await stopScan();
-        const msg = (e && e.message) ? e.message : String(e);
-        setError("iPhone/Safari kan soms moeilijk doen met web-scanners.\n\nFout:\n" + msg + "\n\nTip: probeer opnieuw of kies Handmatig.");
+          });
+          return; // ZXing running
+        } catch (e) {
+          console.warn("ZXing failed, falling back to Quagga:", e);
+          // continue to Quagga fallback if available
+        }
       }
+
+      // Quagga fallback (often better for 1D barcodes on iOS)
+      if (libs.hasQuagga) {
+        try {
+          setUsingQuagga(true);
+
+          // Quagga wants an element to draw into
+          const target = quaggaTargetRef.current;
+          if (!target) {
+            setError("Quagga target ontbreekt. Herlaad de pagina.");
+            return;
+          }
+
+          // Important for iOS: set numOfWorkers=0
+          // Stop our own stream before Quagga starts its own (iOS can be picky)
+          try {
+            if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; }
+          } catch {}
+          if (streamRef.current) {
+            try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+            streamRef.current = null;
+          }
+
+          window.Quagga.init({
+            inputStream: {
+              type: "LiveStream",
+              target,
+              constraints: {
+                facingMode: "environment"
+              },
+              area: { // focus area, relative
+                top: "25%",
+                right: "10%",
+                left: "10%",
+                bottom: "25%"
+              }
+            },
+            locate: true,
+            numOfWorkers: 0,
+            decoder: {
+              readers: [
+                "ean_reader",
+                "ean_8_reader",
+                "upc_reader",
+                "upc_e_reader",
+                "code_128_reader",
+                "code_39_reader",
+                "code_93_reader",
+                "i2of5_reader"
+              ]
+            }
+          }, (err) => {
+            if (err) {
+              console.error(err);
+              setError("Quagga kon niet starten. Gebruik handmatig of barcodefoto.");
+              return;
+            }
+            window.Quagga.start();
+          });
+
+          window.Quagga.offDetected && window.Quagga.offDetected();
+          window.Quagga.onDetected((data) => {
+            const code = data?.codeResult?.code;
+            const format = data?.codeResult?.format || "UNKNOWN";
+            if (!code) return;
+
+            if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+            scanTimerRef.current = null;
+
+            setBarcodeValue(code);
+            setBarcodeFormat(String(format));
+
+            // Stop Quagga and proceed
+            try { window.Quagga.stop(); } catch {}
+            stopScan().then(() => setStep("details"));
+          });
+
+          return;
+        } catch (e) {
+          console.error(e);
+          await stopScan();
+          setError("Scanner kon niet starten. Gebruik handmatig of barcodefoto.");
+          return;
+        }
+      }
+
+      // If we reach here, nothing worked.
+      await stopScan();
+      setError("Scanner startte niet. Gebruik handmatig of barcodefoto.");
     }
 
     function openManual() {
@@ -673,7 +825,8 @@
             <div className="field-label">Barcode scannen (camera)</div>
 
             <div className="scan-view-container">
-              <video ref={videoRef} className="scan-video" playsInline muted></video>
+              <video ref={videoRef} className="scan-video" playsInline muted style={{ display: usingQuagga ? "none" : "block" }}></video>
+              <div ref={quaggaTargetRef} style={{ position: "absolute", inset: 0, display: usingQuagga ? "block" : "none" }}></div>
               {scanning && (
                 <div className="scan-guides">
                   <div className="scan-guides-box"></div>
@@ -828,7 +981,7 @@
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
         if (!lastPinch.current) { lastPinch.current = { dist }; return; }
         const ratio = dist / (lastPinch.current.dist || dist);
-        setScale(s => clamp(s * ratio, 0.2, 6)); // allow further zoom-out
+        setScale(s => clamp(s * ratio, 0.05, 8)); // allow further zoom-out
         lastPinch.current = { dist };
       }
     }
@@ -839,7 +992,7 @@
     function onWheel(e) {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.06 : 0.94;
-      setScale(s => clamp(s * factor, 0.2, 6));
+      setScale(s => clamp(s * factor, 0.05, 8));
     }
 
     function resetFit() {
@@ -937,9 +1090,9 @@
             </div>
 
             <div className="crop-controls">
-              <button className="button-secondary" onClick={() => setScale(s => clamp(s * 0.85, 0.2, 6))}>➖ Zoom uit</button>
+              <button className="button-secondary" onClick={() => setScale(s => clamp(s * 0.85, 0.05, 8))}>➖ Zoom uit</button>
               <button className="button-secondary" onClick={resetFit}>↺ Reset</button>
-              <button className="button-secondary" onClick={() => setScale(s => clamp(s * 1.18, 0.2, 6))}>➕ Zoom in</button>
+              <button className="button-secondary" onClick={() => setScale(s => clamp(s * 1.18, 0.05, 8))}>➕ Zoom in</button>
             </div>
 
             <div className="helper" style={{ marginTop: 10 }}>
@@ -1244,9 +1397,7 @@
         )}
       </div>
     );
-  }
-
-  function HelpTab() {
+  }function HelpTab() {
     return (
       <div>
         <h2 className="section-title">Handleiding</h2>
